@@ -1,4 +1,4 @@
-# FX Desk — Forex Trading Planner & Risk Toolkit
+# Yumoto Trades — Forex Trading Planner & Risk Toolkit
 
 A self-contained toolkit for forex traders working toward (and managing) funded
 prop-firm accounts such as Equity Edge, FTMO-style challenges, and similar
@@ -25,7 +25,9 @@ Open the file directly in a browser. Five sections:
 - **Funded Tracker** — enter your challenge rules (account size, profit target,
   daily loss limit, max drawdown, static or trailing) and your current equity;
   it shows live buffers to each breach level, progress to target, and a
-  suggested max risk per trade.
+  suggested max risk per trade. Includes a live **market clock in Philippine
+  time** showing every session and ICT killzone converted to PHT, with
+  open/closed status and daylight-saving handled automatically.
 - **Calculators** — position size (lot sizing from % risk and stop distance,
   with correct pip-value math for USD-quote, USD-base, JPY-cross and GBP-quote
   pairs), risk:reward with breakeven win rate, pip value, margin/leverage,

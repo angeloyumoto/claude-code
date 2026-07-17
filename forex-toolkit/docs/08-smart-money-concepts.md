@@ -106,10 +106,14 @@ That closure is the entry.
 
 ### The filters that make it work (the actual edge)
 
-- **Killzones only.** Forex volume concentrates where sessions open:
-  **London killzone ≈ 07:00–10:00 UTC**, **New York killzone ≈ 12:30–15:30
-  UTC**. Setups outside these windows are structurally lower probability.
-  Index traders use 09:30–10:30 ET after the equity open — same idea.
+- **Killzones only.** Forex volume concentrates where sessions open. ICT
+  defines killzones in market-local time, so the PHT conversion shifts with
+  UK/US daylight saving (Manila never changes): **London killzone =
+  07:00–10:00 London time → 14:00–17:00 PHT in UK summer, 15:00–18:00 PHT in
+  winter**; **New York killzone = 08:30–11:30 New York time → 20:30–23:30 PHT
+  in US summer, 21:30–00:30 PHT in winter**. Setups outside these windows are
+  structurally lower probability. Index traders use 09:30–10:30 ET after the
+  equity open — same idea. The app's Market clock shows the live conversion.
 - **Correlation alignment.** The transcript's rule "if ES and NASDAQ
   disagree, no trade" translates directly to forex: check a correlated pair
   or the dollar side. Long EURUSD is higher-probability when GBPUSD shows the

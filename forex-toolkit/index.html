@@ -1,4 +1,4 @@
-<title>FX Desk — Forex Trading Planner &amp; Risk Toolkit</title>
+<title>Yumoto Trades — Forex Trading Planner &amp; Risk Toolkit</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   /* Committed single theme: black terminal ground, orange accent.
@@ -168,7 +168,7 @@
 
 <header>
   <div class="header-inner">
-    <h1 class="wordmark">FX<span>·</span>Desk</h1>
+    <h1 class="wordmark">Yumoto<span> Trades</span></h1>
     <div class="tagline">Trading planner, risk tools &amp; funded-account tracker — built for prop-firm evaluations</div>
   </div>
 </header>
@@ -190,6 +190,21 @@
   <div class="section-head">
     <h2>Funded-account tracker</h2>
     <p>Enter your challenge rules (Equity Edge and most prop firms publish these on the account dashboard), then update your equity each day. The tracker shows how much room you have left before a breach — and how much you can safely risk today.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <h3>Market clock — Philippine time</h3>
+      <div class="mono" id="mc-now" style="font-size:18px;color:var(--accent-ink)">—</div>
+    </div>
+    <p class="sub">Session opens and closes converted to PHT (UTC+8). Manila has no daylight saving but New York and London do, so these times shift by an hour twice a year — the table recomputes them automatically.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Session</th><th>Local hours</th><th class="num">In Philippine time</th><th>Status</th><th>Why it matters</th></tr></thead>
+        <tbody id="mc-body"></tbody>
+      </table>
+    </div>
+    <div class="hint" style="margin-top:8px">Sweet spots from the Philippines: <b>15:00–18:00 PHT</b> (London open — afternoon) and <b>20:30–24:00 PHT</b> (New York open &amp; the London/NY overlap — evening, ideal around a day job). Tokyo morning 08:00–11:00 PHT suits JPY/AUD pairs. Avoid ~04:00–06:00 PHT: rollover, widest spreads, thinnest liquidity.</div>
   </div>
 
   <div class="grid cols-2">
@@ -473,10 +488,11 @@
     <p>You trade one currency against another. Buying EURUSD at 1.0850 means you profit if the euro strengthens against the dollar. Prices move in <b>pips</b> — 0.0001 for most pairs, 0.01 for JPY pairs. A <b>standard lot</b> is 100,000 units of the base currency; one pip on one lot of a USD-quoted pair is worth $10. Mini lots (0.1) and micro lots (0.01) scale that down to $1 and $0.10.</p>
     <h4>Sessions matter more than beginners think</h4>
     <ul>
-      <li><b>Tokyo</b> (00:00–09:00 UTC) — quieter, range-bound; JPY and AUD pairs most active.</li>
-      <li><b>London</b> (07:00–16:00 UTC) — the largest session; most trends start here.</li>
-      <li><b>New York</b> (13:00–22:00 UTC) — USD news lands here; the <b>London/NY overlap (13:00–16:00 UTC)</b> has the deepest liquidity and cleanest moves of the day.</li>
+      <li><b>Tokyo</b> (00:00–09:00 UTC ≈ <b>08:00–17:00 PHT</b>) — quieter, range-bound; JPY and AUD pairs most active. Your morning.</li>
+      <li><b>London</b> (07:00–16:00 UTC ≈ <b>15:00–24:00 PHT</b>) — the largest session; most trends start here. Your afternoon/evening.</li>
+      <li><b>New York</b> (13:00–22:00 UTC ≈ <b>21:00–06:00 PHT</b>) — USD news lands here; the <b>London/NY overlap (≈ 21:00–24:00 PHT)</b> has the deepest liquidity and cleanest moves of the day. Your evening — the most convenient prime window from the Philippines.</li>
     </ul>
+    <p class="muted-note">PHT times shown for UK/US summer; add one hour November–March (Manila has no daylight saving). The Market clock on the Funded Tracker tab always shows the exact current conversion.</p>
     <h4>Spread, slippage and news</h4>
     <p>The spread is your cost per trade; it widens violently around high-impact news (NFP, CPI, FOMC) and at rollover (~21:00–22:00 UTC). Prop firms often prohibit or penalize holding through major news — check the rules. Keep an economic calendar open every session.</p>
     <h4>Reading a chart, minimally</h4>
@@ -595,7 +611,7 @@
 
     <h4>The filters that carry the edge</h4>
     <ul>
-      <li><b>Killzones only:</b> London ≈ 07:00–10:00 UTC, New York ≈ 12:30–15:30 UTC. Nothing in the first ~90 minutes → done for the day.</li>
+      <li><b>Killzones only:</b> London ≈ 07:00–10:00 London time (<b>14:00–17:00 PHT</b> in UK summer, 15:00–18:00 in winter), New York ≈ 08:30–11:30 New York time (<b>20:30–23:30 PHT</b> in US summer, 21:30–00:30 in winter). The Market clock on the tracker tab always shows the current conversion. Nothing in the first ~90 minutes → done for the day.</li>
       <li><b>Correlation alignment:</b> the forex version of "ES and NASDAQ must agree" — take EURUSD longs only when GBPUSD (or an inverted DXY) shows the same 5m structure shift. Twins disagreeing = indecision = no trade.</li>
       <li><b>One or two trades a day.</b> The model's main job is filtering trades <i>out</i> — on a loss-capped funded account, that's exactly the right shape.</li>
     </ul>
@@ -1093,5 +1109,52 @@
     });
   }
   renderJournal();
+
+  // ---------- market clock (Philippine time) ----------
+  var MC_SESSIONS = [
+    { name: "Sydney", tz: "Australia/Sydney", label: "07:00–16:00 Sydney", start: 7, end: 16, note: "AUD/NZD; thin liquidity" },
+    { name: "Tokyo", tz: "Asia/Tokyo", label: "09:00–18:00 Tokyo", start: 9, end: 18, note: "JPY & AUD pairs move" },
+    { name: "London", tz: "Europe/London", label: "08:00–17:00 London", start: 8, end: 17, note: "Largest session — trends start here" },
+    { name: "London killzone", tz: "Europe/London", label: "07:00–10:00 London", start: 7, end: 10, note: "Prime ICT window (sweeps of Asian range)" },
+    { name: "New York", tz: "America/New_York", label: "08:00–17:00 New York", start: 8, end: 17, note: "USD news lands; NYSE opens 09:30 ET" },
+    { name: "NY killzone", tz: "America/New_York", label: "08:30–11:30 New York", start: 8.5, end: 11.5, note: "Prime ICT window (US data + equity open)" },
+    { name: "London/NY overlap", tz: "America/New_York", label: "08:00–12:00 New York", start: 8, end: 12, note: "Deepest liquidity of the day" }
+  ];
+  function tzOffsetHours(tz, d) {
+    return (new Date(d.toLocaleString("en-US", { timeZone: tz })) - new Date(d.toLocaleString("en-US", { timeZone: "UTC" }))) / 36e5;
+  }
+  function hoursNowIn(tz, d) {
+    var p = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour12: false, hour: "2-digit", minute: "2-digit" }).formatToParts(d);
+    var h = 0, m = 0;
+    p.forEach(function (x) { if (x.type === "hour") h = +x.value; if (x.type === "minute") m = +x.value; });
+    return (h % 24) + m / 60;
+  }
+  function fmtClock(h) {
+    h = ((h % 24) + 24) % 24;
+    var hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+    if (mm === 60) { hh = (hh + 1) % 24; mm = 0; }
+    return (hh < 10 ? "0" : "") + hh + ":" + (mm < 10 ? "0" : "") + mm;
+  }
+  function mcRender() {
+    var now = new Date();
+    $("mc-now").textContent = new Intl.DateTimeFormat("en-PH", {
+      timeZone: "Asia/Manila", weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+    }).format(now) + " PHT";
+    var day = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", weekday: "short" }).format(now);
+    var weekend = day === "Sat" || day === "Sun";
+    $("mc-body").innerHTML = MC_SESSIONS.map(function (s) {
+      var diff = 8 - tzOffsetHours(s.tz, now); // hours to add to market-local time to get PHT
+      var open = fmtClock(s.start + diff), close = fmtClock(s.end + diff);
+      var nowLocal = hoursNowIn(s.tz, now);
+      var active = !weekend && nowLocal >= s.start && nowLocal < s.end;
+      var wraps = (s.end + diff) >= 24 && (s.start + diff) < 24;
+      return "<tr><td><b>" + s.name + "</b></td><td class='mono'>" + s.label + "</td>" +
+        "<td class='num mono'>" + open + "–" + close + (wraps ? " (next day)" : "") + "</td>" +
+        "<td><span class='pill " + (active ? "ok" : "neutral") + "'>" + (active ? "open now" : "closed") + "</span></td>" +
+        "<td class='muted-note'>" + s.note + "</td></tr>";
+    }).join("");
+  }
+  mcRender();
+  setInterval(mcRender, 30000);
 })();
 </script>

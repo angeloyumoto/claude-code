@@ -69,6 +69,39 @@ Practical rule: if you can only trade two hours a day, make it the London open
 (07:00–09:00 UTC) or the overlap (13:00–16:00 UTC). Avoid the rollover hour
 (~21:00–22:00 UTC) when spreads spike.
 
+### Philippine time cheat sheet (PHT = UTC+8, no daylight saving)
+
+Times below are for UK/US **summer** (roughly late March–early November).
+Manila's clock never changes, but London and New York fall back an hour in
+winter — so add **one hour** to every London/NY row from November to March.
+The Market clock in the app computes the exact current conversion for you.
+
+| Market event | UTC (summer) | Philippine time |
+|---|---|---|
+| Sydney session | 21:00–06:00 | 05:00–14:00 PHT |
+| Tokyo session | 00:00–09:00 | **08:00–17:00 PHT** — your morning |
+| London open / session | 07:00–16:00 | **15:00–24:00 PHT** — your afternoon |
+| London killzone (ICT) | 06:00–09:00 | **14:00–17:00 PHT** |
+| New York session | 13:00–22:00 | **21:00–06:00 PHT** — your evening |
+| NY killzone (ICT) | 12:30–15:30 | **20:30–23:30 PHT** |
+| NYSE stock-market open | 13:30 | 21:30 PHT |
+| London/NY overlap | 13:00–16:00 | **21:00–24:00 PHT** — deepest liquidity |
+| NFP / CPI releases | 12:30 | 20:30 PHT |
+| FOMC rate decisions | 18:00 (stmt) | 02:00 PHT (next day) |
+| New York close / rollover | 21:00–22:00 | **05:00–06:00 PHT** — avoid: widest spreads |
+| Weekly open (Mon) / close (Sat) | Sun 21:00 / Fri 21:00 | Mon 05:00 / Sat 05:00 PHT |
+
+**Best windows from the Philippines:**
+
+1. **20:30–24:00 PHT** — NY killzone + London/NY overlap. Prime liquidity in
+   your evening; the most practical window around a day job.
+2. **15:00–18:00 PHT** — London open. The other world-class window, in your
+   afternoon.
+3. **08:00–11:00 PHT** — Tokyo morning, for JPY/AUD pairs if you trade early.
+
+Avoid 04:00–08:00 PHT (rollover then thin Sydney-only hours) and be careful
+after midnight PHT — late-NY drift plus your own fatigue is a poor mix.
+
 ## 5. Costs: spread, commission, swap, slippage
 
 - **Spread** — the buy/sell gap; your entry cost. On majors, 0.1–1.5 pips.
