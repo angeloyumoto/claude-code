@@ -454,7 +454,7 @@
 <section id="sec-guide" role="tabpanel" hidden>
   <div class="section-head">
     <h2>Guide &amp; strategies</h2>
-    <p>A working reference: the mechanics, the risk rules that keep accounts alive, nine strategies from core to advanced, the psychology that decides whether any of it holds, a playbook for passing funded-account evaluations, and a glossary.</p>
+    <p>A working reference: the mechanics, the risk rules that keep accounts alive, strategies from core through advanced to the smart-money (ICT) models prop traders favor, the psychology that decides whether any of it holds, a playbook for passing funded-account evaluations, and a glossary.</p>
   </div>
 
   <div class="guide-tabs" role="tablist">
@@ -462,6 +462,7 @@
     <button class="ghost" role="tab" data-gtab="g-risk" aria-selected="false">Risk rules</button>
     <button class="ghost" role="tab" data-gtab="g-strat" aria-selected="false">Core strategies</button>
     <button class="ghost" role="tab" data-gtab="g-adv" aria-selected="false">Advanced strategies</button>
+    <button class="ghost" role="tab" data-gtab="g-smc" aria-selected="false">Smart money (ICT)</button>
     <button class="ghost" role="tab" data-gtab="g-prop" aria-selected="false">Funded-account playbook</button>
     <button class="ghost" role="tab" data-gtab="g-psy" aria-selected="false">Psychology</button>
     <button class="ghost" role="tab" data-gtab="g-gloss" aria-selected="false">Glossary</button>
@@ -575,6 +576,38 @@
     </ul>
 
     <div class="callout">Trend-following setups (2, 5, 7, 9) forgive imperfect entries; reversal setups (6, 8) do not. Master a trend strategy before touching reversals — and never trade reversals near your daily loss limit.</div>
+  </div>
+
+  <div class="card prose" id="g-smc" hidden>
+    <h3>Smart Money Concepts (ICT) — the liquidity playbook</h3>
+    <p>The strategy school most visible among funded prop traders: instead of indicators, read price through <b>liquidity</b> — the stop orders resting above highs and below lows. Full write-up with all four models in <code>docs/08-smart-money-concepts.md</code>.</p>
+
+    <h4>The core logic</h4>
+    <p>Old highs hide buy orders (shorts' stops + breakout buyers); old lows hide sell orders. A large seller needs buyers to sell to — so price is routinely pushed <i>through</i> a high to fill those orders, then reverses. Sweeps of liquidity are entry signals (after confirmation); pools of liquidity are your targets.</p>
+
+    <h4>The 4-step intraday model</h4>
+    <ol>
+      <li><b>Map the draws on liquidity</b> before the session: Asia/London highs &amp; lows, previous day's high/low, equal highs/lows, untaken 1H/4H swings.</li>
+      <li><b>Manipulation:</b> during a killzone, price sweeps one of your levels — a wick through it that <i>closes back inside</i>. (A close that holds beyond = breakout, not a sweep. Stand down.)</li>
+      <li><b>5-minute confirmation:</b> a break of structure or an inverse fair value gap in the reversal direction. No confirmation, no trade.</li>
+      <li><b>Retrace, then 1-minute trigger:</b> wait for the pullback into the fresh 5m gap or the 50% equilibrium (it shows up as a small 1m structure break <i>against</i> you), then enter on the 1m break of structure <i>back</i> in your direction. Stop beyond the sweep's wick; targets at the opposing liquidity pools; partial at the first pool, stop to breakeven.</li>
+    </ol>
+
+    <h4>The filters that carry the edge</h4>
+    <ul>
+      <li><b>Killzones only:</b> London ≈ 07:00–10:00 UTC, New York ≈ 12:30–15:30 UTC. Nothing in the first ~90 minutes → done for the day.</li>
+      <li><b>Correlation alignment:</b> the forex version of "ES and NASDAQ must agree" — take EURUSD longs only when GBPUSD (or an inverted DXY) shows the same 5m structure shift. Twins disagreeing = indecision = no trade.</li>
+      <li><b>One or two trades a day.</b> The model's main job is filtering trades <i>out</i> — on a loss-capped funded account, that's exactly the right shape.</li>
+    </ul>
+
+    <h4>Also in the full doc</h4>
+    <ul>
+      <li><b>Silver Bullet</b> — fixed one-hour window (e.g. 14:00–15:00 UTC): first FVG toward the draw, ≥2R only.</li>
+      <li><b>London Judas swing</b> — the fake-out sweep of the Asian range at London open, entered on displacement back through it.</li>
+      <li><b>Power of Three</b> — accumulation → manipulation → distribution as a daily bias lens, plus premium/discount.</li>
+    </ul>
+
+    <div class="callout red"><b>Keep your skepticism.</b> Screenshots of anyone's P/L — however large — are not your data. Backtest 30+ trades in the Journal tab first; keep 1m stops ≥ ~5× the spread; and remember NY killzone sits on top of US news releases your firm may prohibit trading.</div>
   </div>
 
   <div class="card prose" id="g-prop" hidden>
@@ -713,7 +746,7 @@
   document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (t) {
     t.addEventListener("click", function () {
       document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (o) { o.setAttribute("aria-selected", o === t ? "true" : "false"); });
-      ["g-fund", "g-risk", "g-strat", "g-adv", "g-prop", "g-psy", "g-gloss"].forEach(function (id) { $(id).hidden = id !== t.dataset.gtab; });
+      ["g-fund", "g-risk", "g-strat", "g-adv", "g-smc", "g-prop", "g-psy", "g-gloss"].forEach(function (id) { $(id).hidden = id !== t.dataset.gtab; });
     });
   });
 

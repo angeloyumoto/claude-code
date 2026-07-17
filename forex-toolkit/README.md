@@ -15,7 +15,8 @@ evaluation programs.
 | `docs/04-funded-accounts-playbook.md` | How evaluations work and how to pass them without breaching. |
 | `docs/05-trading-psychology.md` | Biases, tilt, and the protocols that keep rules followed. |
 | `docs/06-advanced-strategies.md` | Five more strategies: break &amp; retest, liquidity sweeps, fib confluence, divergence, mechanical crossover. |
-| `docs/07-glossary.md` | Full A–Z of forex, technical-analysis and prop-firm terms. |
+| `docs/07-glossary.md` | Full A–Z of forex, technical-analysis, prop-firm and ICT terms. |
+| `docs/08-smart-money-concepts.md` | The ICT / Smart Money playbook prop traders favor: the 4-step liquidity-sweep model, Silver Bullet, London Judas swing, Power of Three. |
 
 ## The app (`index.html`)
 

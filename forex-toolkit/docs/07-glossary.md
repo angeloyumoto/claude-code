@@ -137,6 +137,52 @@ prop-firm rulebooks — grouped by topic, plain-English definitions.
 - **Premium / discount** — upper / lower half of a range; smart-money
   shorthand for "expensive / cheap within structure."
 
+## Smart Money Concepts (ICT) vocabulary
+
+Terms specific to the SMC/ICT school (see `08-smart-money-concepts.md`):
+
+- **Buy-side / sell-side liquidity (BSL/SSL)** — the order clusters resting
+  above highs / below lows: stop-losses plus breakout entries.
+- **Draw on liquidity** — the pool price is currently "reaching for" —
+  session highs/lows, PDH/PDL, equal highs/lows; both entry triggers and
+  targets.
+- **Sweep / raid / stop hunt** — price trading through a pool and closing
+  back inside — the trap that fuels a reversal.
+- **Manipulation** — the engineered false move that performs the sweep.
+- **Displacement** — a fast, full-bodied impulse that breaks structure and
+  leaves gaps behind; the footprint of real institutional interest.
+- **Break of structure (BOS)** — a candle close beyond the most recent swing
+  in the prevailing trend's direction (continuation signal).
+- **Change of character (CHOCH)** — the first structure break *against* the
+  prevailing trend — the earliest reversal evidence.
+- **Fair value gap (FVG) / imbalance** — the gap left inside a three-candle
+  impulse; often revisited ("filled") before continuation.
+- **Inverse FVG (IFVG)** — an FVG that price closes through against its
+  original direction — old support/resistance logic flipping.
+- **Order block** — the last opposing candle before a displacement; a
+  refined supply/demand zone for entries.
+- **Breaker block** — an order block that failed and flipped to the other
+  side after a sweep.
+- **Equilibrium** — the 50% of the current dealing range; retraces to it are
+  the standard continuation entry zone.
+- **Premium / discount arrays** — sell zones above equilibrium, buy zones
+  below it.
+- **Optimal trade entry (OTE)** — the 62–79% retracement pocket of an
+  impulse leg.
+- **Killzone** — the time windows where these setups cluster: London open
+  ≈ 07:00–10:00 UTC, New York open ≈ 12:30–15:30 UTC (09:30–10:30 ET for
+  indices).
+- **Judas swing** — the false move at a session open that sweeps one side of
+  the overnight range before the real move runs the other way.
+- **Power of Three (AMD)** — the daily cycle: accumulation (range) →
+  manipulation (sweep) → distribution (the true directional leg).
+- **Silver Bullet** — ICT's fixed-window model: the first FVG in the
+  direction of the draw during a set hour (e.g. 10–11 AM ET).
+- **SMT divergence** — correlated instruments disagreeing (one sweeps a
+  level, the other doesn't) — evidence a move is manipulation, not strength.
+- **Equal highs / equal lows (EQH/EQL)** — two-plus touches at one price;
+  the most obvious liquidity pools on any chart.
+
 ## Fundamentals & news
 
 - **Economic calendar** — schedule of data releases with expected impact;
