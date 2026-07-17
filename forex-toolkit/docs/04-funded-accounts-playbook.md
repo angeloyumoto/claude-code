@@ -1,6 +1,6 @@
 # Funded-Account Playbook
 
-How prop-firm evaluations (Equity Edge, FTMO-style programs, and similar
+How prop-firm evaluations (Equity Edge, FTMO-style programs, and similar)
 work: the rules that actually decide pass/fail, the math of passing, and the
 discipline that keeps the account after you're funded.
 

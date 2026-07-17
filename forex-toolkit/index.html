@@ -1,43 +1,18 @@
 <title>FX Desk — Forex Trading Planner &amp; Risk Toolkit</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+  /* Committed single theme: black terminal ground, orange accent.
+     Green/red stay reserved for profit/loss; caution is yellow so it
+     never reads as the accent. */
   :root {
-    --bg: #F2F4F8; --surface: #FFFFFF; --raised: #F8FAFC; --border: #DFE4EC;
-    --ink: #1A2130; --muted: #5A6478; --faint: #8B94A8;
-    --accent: #8A6B1F; --accent-ink: #6E5518; --accent-soft: #F3ECD9;
-    --good: #1E7A50; --good-soft: #E2F2E9;
-    --warn: #B15D14; --warn-soft: #F9EBDC;
-    --bad: #B03A32; --bad-soft: #F8E4E2;
-    --shadow: 0 1px 2px rgba(20,28,46,.06), 0 4px 16px rgba(20,28,46,.05);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0D1321; --surface: #151D2E; --raised: #1B2438; --border: #28324A;
-      --ink: #E9EDF5; --muted: #98A2B8; --faint: #6B7590;
-      --accent: #D3AC53; --accent-ink: #E2C377; --accent-soft: #2A2617;
-      --good: #4CBE8A; --good-soft: #12281E;
-      --warn: #E09A4E; --warn-soft: #2C2113;
-      --bad: #E06A60; --bad-soft: #2E1715;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0D1321; --surface: #151D2E; --raised: #1B2438; --border: #28324A;
-    --ink: #E9EDF5; --muted: #98A2B8; --faint: #6B7590;
-    --accent: #D3AC53; --accent-ink: #E2C377; --accent-soft: #2A2617;
-    --good: #4CBE8A; --good-soft: #12281E;
-    --warn: #E09A4E; --warn-soft: #2C2113;
-    --bad: #E06A60; --bad-soft: #2E1715;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
-  }
-  :root[data-theme="light"] {
-    --bg: #F2F4F8; --surface: #FFFFFF; --raised: #F8FAFC; --border: #DFE4EC;
-    --ink: #1A2130; --muted: #5A6478; --faint: #8B94A8;
-    --accent: #8A6B1F; --accent-ink: #6E5518; --accent-soft: #F3ECD9;
-    --good: #1E7A50; --good-soft: #E2F2E9;
-    --warn: #B15D14; --warn-soft: #F9EBDC;
-    --bad: #B03A32; --bad-soft: #F8E4E2;
-    --shadow: 0 1px 2px rgba(20,28,46,.06), 0 4px 16px rgba(20,28,46,.05);
+    --bg: #0B0B0C; --surface: #151517; --raised: #1D1D20; --border: #2C2C31;
+    --ink: #F1EEE9; --muted: #A09A90; --faint: #6F6A62;
+    --accent: #FF8C2E; --accent-ink: #FFA85E; --accent-soft: #2B1A0B;
+    --good: #4CBE84; --good-soft: #10251A;
+    --warn: #E6C447; --warn-soft: #2A230C;
+    --bad: #EA5F53; --bad-soft: #2C1311;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 18px rgba(0,0,0,.35);
+    color-scheme: dark;
   }
 
   * { box-sizing: border-box; }
@@ -479,14 +454,17 @@
 <section id="sec-guide" role="tabpanel" hidden>
   <div class="section-head">
     <h2>Guide &amp; strategies</h2>
-    <p>A working reference: the mechanics, the risk rules that keep accounts alive, four concrete strategies, and a playbook for passing funded-account evaluations.</p>
+    <p>A working reference: the mechanics, the risk rules that keep accounts alive, nine strategies from core to advanced, the psychology that decides whether any of it holds, a playbook for passing funded-account evaluations, and a glossary.</p>
   </div>
 
   <div class="guide-tabs" role="tablist">
     <button class="ghost" role="tab" data-gtab="g-fund" aria-selected="true">Fundamentals</button>
     <button class="ghost" role="tab" data-gtab="g-risk" aria-selected="false">Risk rules</button>
-    <button class="ghost" role="tab" data-gtab="g-strat" aria-selected="false">Strategies</button>
+    <button class="ghost" role="tab" data-gtab="g-strat" aria-selected="false">Core strategies</button>
+    <button class="ghost" role="tab" data-gtab="g-adv" aria-selected="false">Advanced strategies</button>
     <button class="ghost" role="tab" data-gtab="g-prop" aria-selected="false">Funded-account playbook</button>
+    <button class="ghost" role="tab" data-gtab="g-psy" aria-selected="false">Psychology</button>
+    <button class="ghost" role="tab" data-gtab="g-gloss" aria-selected="false">Glossary</button>
   </div>
 
   <div class="card prose" id="g-fund">
@@ -558,6 +536,47 @@
     <div class="callout">Whatever you choose: <b>one strategy, one or two pairs, 30 trades, journal everything.</b> Strategy-hopping after three losses is the most reliable way to never find out if anything works.</div>
   </div>
 
+  <div class="card prose" id="g-adv" hidden>
+    <h3>Advanced strategies</h3>
+    <p>These need more chart-reading skill than the core four. Same rules apply: one at a time, 30+ journaled trades, judge by expectancy. Full write-ups in <code>docs/06-advanced-strategies.md</code>.</p>
+
+    <h4>5. Break and retest</h4>
+    <ul>
+      <li>Identify a level the market has respected at least twice (H1–H4). Wait for a decisive <b>close</b> through it.</li>
+      <li>Do not chase the breakout candle. Place a limit order at the broken level and wait for the retest — old resistance becomes new support (and vice versa).</li>
+      <li>Stop beyond the retest swing; target the next structural level, minimum 2R. If price never retests, you miss the trade — that's the strategy working, not failing.</li>
+    </ul>
+
+    <h4>6. Liquidity sweep reversal (stop-hunt fade)</h4>
+    <ul>
+      <li>Mark obvious liquidity pools: equal highs/lows, yesterday's high/low, session extremes — clusters where stops accumulate.</li>
+      <li>Setup: price spikes <b>through</b> the pool, then closes back inside the prior range within 1–3 candles (the sweep + reclaim). That failed break traps breakout traders.</li>
+      <li>Enter on the reclaim close or its retest; stop beyond the sweep wick; target the opposite side of the range. Works best during London and NY opens; skip it in strong trends.</li>
+    </ul>
+
+    <h4>7. Fibonacci confluence pullback</h4>
+    <ul>
+      <li>In a trend, draw the fib retracement over the last impulse leg. Interest zone: 38.2–61.8%.</li>
+      <li>Only act where a fib level <b>stacks</b> with an independent reason — prior structure, a moving average, a round number. One tool alone is a coin flip; confluence is the edge.</li>
+      <li>Trigger, stop and management identical to the core pullback strategy; targets at the −27% / −62% extensions or prior extreme.</li>
+    </ul>
+
+    <h4>8. Divergence reversal at higher-timeframe levels</h4>
+    <ul>
+      <li>Location first: price at a <b>weekly/daily</b> level, not mid-range. Then look for RSI(14) divergence — price makes a new high/low, RSI doesn't.</li>
+      <li>Confirm with a reversal candle on H4/D1 before entering; divergence alone can persist through 200 more pips of trend.</li>
+      <li>Stop beyond the extreme; first target the nearest H4 structure (~1.5–2R). Counter-trend, so: half normal risk, and never during momentum news days.</li>
+    </ul>
+
+    <h4>9. Moving-average crossover baseline (mechanical)</h4>
+    <ul>
+      <li>H4: 20 EMA crosses 50 EMA in the direction of the daily 200 EMA slope. Enter on the close of the crossover candle; stop below the last swing; exit on the opposite cross or 2R.</li>
+      <li>Whipsaws sideways markets — add an ADX(14) &gt; 20 filter or skip ranging pairs. Its virtue is zero discretion: useful as a benchmark to measure your discretionary results against.</li>
+    </ul>
+
+    <div class="callout">Trend-following setups (2, 5, 7, 9) forgive imperfect entries; reversal setups (6, 8) do not. Master a trend strategy before touching reversals — and never trade reversals near your daily loss limit.</div>
+  </div>
+
   <div class="card prose" id="g-prop" hidden>
     <h3>Funded-account playbook</h3>
     <p>Prop-firm evaluations (Equity Edge, FTMO-style firms, and similar) sell you a shot at trading their capital: pass a profit target without breaching loss limits, and you split profits on a funded account. Typical two-phase structure:</p>
@@ -589,6 +608,67 @@
     <p>Nothing changes — that's the whole trick. The same 0.5% risk and daily stop that passed the evaluation keep the funded account. Withdraw profits on schedule, treat each payout as banked, and scale only through the firm's scaling plan rather than by raising risk.</p>
 
     <div class="callout red"><b>Reality check:</b> most evaluation attempts fail, fees are the firm's product, and past performance never guarantees future results. Only spend on evaluations what you can afford to lose entirely, and prove your strategy on demo first — it's free.</div>
+  </div>
+
+  <div class="card prose" id="g-psy" hidden>
+    <h3>Trading psychology</h3>
+    <p>Your strategy decides whether you <i>can</i> win; your psychology decides whether you actually collect. Every rule in the Risk tab exists because future-you, mid-drawdown, cannot be trusted without one. Full guide in <code>docs/05-trading-psychology.md</code>.</p>
+
+    <h4>The five account-killers</h4>
+    <ul>
+      <li><b>Revenge trading</b> — re-entering oversized right after a loss to "get it back." Antidote: the two-loss daily stop, obeyed mechanically.</li>
+      <li><b>FOMO entries</b> — chasing a move that already left. If the plan's entry is gone, the trade is gone; there is a nearly identical setup next week.</li>
+      <li><b>Loss aversion</b> — widening stops or removing them because closing "makes the loss real." The stop <i>is</i> the trade; touching it converts 1R into catastrophe.</li>
+      <li><b>Overconfidence after a streak</b> — doubling risk because you're "in the zone." Streaks are variance; your edge didn't change. Risk % never rides a hot hand.</li>
+      <li><b>Recency bias</b> — abandoning a positive-expectancy system after 3 losses. Judge systems on 30-trade blocks, never on the last session.</li>
+    </ul>
+
+    <h4>Protocols that actually work</h4>
+    <ol>
+      <li><b>Decide everything before the trade.</b> Entry, stop, target, size — written in the Planner while calm. Live-market you only executes; it never redesigns.</li>
+      <li><b>Score process, not P/L.</b> A losing trade that followed every rule is a good trade. Grade each journal entry A–D on execution; expectancy handles the money.</li>
+      <li><b>The 10-minute rule.</b> After any loss, hands off the platform for 10 minutes. Tilt has a half-life; give it one.</li>
+      <li><b>Pre-commit your worst day.</b> "Two losses or −1.5% and I close the platform" — said out loud before the session, it's a rule; invented during the session, it's a negotiation you'll lose.</li>
+      <li><b>Trade smaller than feels meaningful.</b> If a single loss changes your mood for the evening, halve the size until it doesn't. Execution quality is downstream of emotional stakes.</li>
+    </ol>
+
+    <div class="callout">The evaluation is not testing whether you can read charts. It's testing whether you can follow your own rules for 30 consecutive trading days. Train that skill specifically.</div>
+  </div>
+
+  <div class="card prose" id="g-gloss" hidden>
+    <h3>Glossary — the terms you'll actually meet</h3>
+    <p>Condensed reference; the full A–Z with more depth is in <code>docs/07-glossary.md</code>.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><b>Pip / pipette</b></td><td>Smallest standard price step (0.0001; 0.01 on JPY pairs). A pipette is a tenth of a pip.</td></tr>
+        <tr><td><b>Lot</b></td><td>100,000 units of base currency. Mini = 0.1, micro = 0.01.</td></tr>
+        <tr><td><b>Spread</b></td><td>Gap between bid and ask — your cost to enter any trade.</td></tr>
+        <tr><td><b>Leverage / margin</b></td><td>Borrowed exposure; margin is the collateral locked while a position is open.</td></tr>
+        <tr><td><b>Equity vs balance</b></td><td>Balance counts closed trades; equity adds open P/L. Prop-firm limits are checked on equity.</td></tr>
+        <tr><td><b>R-multiple</b></td><td>Result ÷ initial risk. +2R = you made twice what you risked.</td></tr>
+        <tr><td><b>Expectancy</b></td><td>Average R per trade over many trades — the single number that says if you have an edge.</td></tr>
+        <tr><td><b>Drawdown</b></td><td>Decline from an equity peak. Prop firms cap it daily and overall, static or trailing.</td></tr>
+        <tr><td><b>Stop-loss / take-profit</b></td><td>Orders that close the position at your invalidation / target price.</td></tr>
+        <tr><td><b>Slippage</b></td><td>Fill worse than requested — normal around news.</td></tr>
+        <tr><td><b>Swap / rollover</b></td><td>Interest paid or earned for holding overnight (triple on Wednesdays).</td></tr>
+        <tr><td><b>Long / short</b></td><td>Buying the base currency / selling it. Shorting is symmetric in forex.</td></tr>
+        <tr><td><b>Support / resistance</b></td><td>Price zones where reversals repeatedly happened; the skeleton of most strategies.</td></tr>
+        <tr><td><b>Breakout / fakeout</b></td><td>Price leaving a range; a fakeout (false break) returns inside and traps the chasers.</td></tr>
+        <tr><td><b>Retest</b></td><td>Price returning to a broken level before continuing — the highest-quality breakout entry.</td></tr>
+        <tr><td><b>Liquidity pool</b></td><td>Cluster of resting stops (equal highs/lows, day extremes) that price often sweeps before reversing.</td></tr>
+        <tr><td><b>Confluence</b></td><td>Multiple independent reasons pointing at the same level — where edges live.</td></tr>
+        <tr><td><b>Divergence</b></td><td>Price makes a new extreme, the oscillator doesn't — momentum fading.</td></tr>
+        <tr><td><b>Risk-on / risk-off</b></td><td>Market mood: risk-on favors AUD/NZD; risk-off favors JPY, CHF, USD.</td></tr>
+        <tr><td><b>Hawkish / dovish</b></td><td>Central-bank tone toward higher / lower rates — the main long-term currency driver.</td></tr>
+        <tr><td><b>NFP / CPI / FOMC</b></td><td>The three USD releases that move every major pair; check the calendar for them.</td></tr>
+        <tr><td><b>Evaluation / challenge</b></td><td>Prop-firm test phase: hit the profit target without breaching loss limits.</td></tr>
+        <tr><td><b>Breach</b></td><td>Violating a daily-loss or max-drawdown limit — ends the account instantly.</td></tr>
+        <tr><td><b>Profit split / payout</b></td><td>Your share of funded-account profits (typically 70–90%), paid on a schedule.</td></tr>
+        <tr><td><b>Consistency rule</b></td><td>Cap on how much of total profit may come from one day; check your firm's %.</td></tr>
+        <tr><td><b>Martingale</b></td><td>Doubling size after losses. Mathematically ruinous, and banned by most firms.</td></tr>
+      </tbody>
+    </table></div>
   </div>
 </section>
 
@@ -633,7 +713,7 @@
   document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (t) {
     t.addEventListener("click", function () {
       document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (o) { o.setAttribute("aria-selected", o === t ? "true" : "false"); });
-      ["g-fund", "g-risk", "g-strat", "g-prop"].forEach(function (id) { $(id).hidden = id !== t.dataset.gtab; });
+      ["g-fund", "g-risk", "g-strat", "g-adv", "g-prop", "g-psy", "g-gloss"].forEach(function (id) { $(id).hidden = id !== t.dataset.gtab; });
     });
   });
 

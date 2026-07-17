@@ -11,8 +11,11 @@ evaluation programs.
 | `index.html` | The app — open it in any browser, no install, no server, no dependencies. |
 | `docs/01-forex-fundamentals.md` | How the market, pips, lots, sessions and spreads actually work. |
 | `docs/02-risk-management.md` | The risk rules and math that keep accounts alive. |
-| `docs/03-strategies.md` | Four concrete strategies with entry/exit/stop rules. |
+| `docs/03-strategies.md` | Four core strategies with entry/exit/stop rules. |
 | `docs/04-funded-accounts-playbook.md` | How evaluations work and how to pass them without breaching. |
+| `docs/05-trading-psychology.md` | Biases, tilt, and the protocols that keep rules followed. |
+| `docs/06-advanced-strategies.md` | Five more strategies: break &amp; retest, liquidity sweeps, fib confluence, divergence, mechanical crossover. |
+| `docs/07-glossary.md` | Full A–Z of forex, technical-analysis and prop-firm terms. |
 
 ## The app (`index.html`)
 
@@ -30,10 +33,12 @@ Open the file directly in a browser. Five sections:
   pre-trade checklist, saved plans, and one-click copy as text.
 - **Journal** — log results in R-multiples; get win rate, average win/loss,
   expectancy and total R, plus a per-trade result chart.
-- **Guide & Strategies** — condensed reference of the `docs/` content.
+- **Guide & Strategies** — condensed reference of the `docs/` content:
+  fundamentals, risk rules, nine strategies, psychology, the funded-account
+  playbook, and a glossary.
 
 Everything is stored in your browser's localStorage only — nothing leaves your
-machine. Light and dark theme follow your system preference.
+machine. The interface uses a committed black-and-orange terminal theme.
 
 ## Disclaimer
 
