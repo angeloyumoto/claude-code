@@ -1,17 +1,17 @@
 <title>Yumoto Trades — Forex Trading Planner &amp; Risk Toolkit</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  /* Committed single theme: black terminal ground, orange accent.
-     Green/red stay reserved for profit/loss; caution is yellow so it
+  /* Committed single theme: deep slate ground, sky-blue accent.
+     Green/red stay reserved for profit/loss; caution is amber so it
      never reads as the accent. */
   :root {
-    --bg: #0B0B0C; --surface: #151517; --raised: #1D1D20; --border: #2C2C31;
-    --ink: #F1EEE9; --muted: #A09A90; --faint: #6F6A62;
-    --accent: #FF8C2E; --accent-ink: #FFA85E; --accent-soft: #2B1A0B;
-    --good: #4CBE84; --good-soft: #10251A;
-    --warn: #E6C447; --warn-soft: #2A230C;
-    --bad: #EA5F53; --bad-soft: #2C1311;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 18px rgba(0,0,0,.35);
+    --bg: #101722; --surface: #182130; --raised: #1F2A3C; --border: #2C3A50;
+    --ink: #EAF0F7; --muted: #9AA8BC; --faint: #66748A;
+    --accent: #4DA3FF; --accent-ink: #7FBCFF; --accent-soft: #12263D;
+    --good: #34C387; --good-soft: #0F2A1E;
+    --warn: #E5B84A; --warn-soft: #2A2310;
+    --bad: #EF6B62; --bad-soft: #2E1614;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 18px rgba(0,0,0,.3);
     color-scheme: dark;
   }
 
@@ -19,9 +19,9 @@
   [hidden] { display: none !important; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font: 15px/1.6 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; text-wrap: balance; margin: 0; }
+  h1, h2, h3 { font-family: inherit; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; margin: 0; }
   .mono, input, select, td.num, .stat b { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
 
   header {
@@ -31,7 +31,7 @@
     max-width: 1100px; margin: 0 auto; padding: 20px 20px 14px;
     display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
   }
-  .wordmark { font-size: 26px; letter-spacing: -.01em; }
+  .wordmark { font-size: 25px; font-weight: 800; letter-spacing: -.02em; }
   .wordmark span { color: var(--accent); }
   .tagline { color: var(--muted); font-size: 13.5px; }
 
@@ -87,7 +87,7 @@
   .fold > summary h3 { font-size: 16.5px; color: var(--ink); }
   .fold .fold-body { padding-top: 12px; }
   @media (prefers-reduced-motion: reduce) { .fold > summary::after { transition: none; } }
-  tbody tr:hover td { background: rgba(255, 140, 46, .05); }
+  tbody tr:hover td { background: rgba(77, 163, 255, .06); }
 
   .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .field label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
