@@ -20,7 +20,11 @@ evaluation programs.
 
 ## The app (`index.html`)
 
-Open the file directly in a browser. Five sections:
+Open the file directly in a browser. Sections:
+
+- **Roadmap** — a guided beginner path: learn → pick one strategy → 30 demo
+  trades → an expectancy gate that opens only when your own journal numbers
+  justify paying for an evaluation.
 
 - **Funded Tracker** — enter your challenge rules (account size, profit target,
   daily loss limit, max drawdown, static or trailing) and your current equity;
@@ -34,8 +38,12 @@ Open the file directly in a browser. Five sections:
   drawdown-recovery, and compound growth.
 - **Trade Planner** — plan entries with auto R:R and sizing, a six-point
   pre-trade checklist, saved plans, and one-click copy as text.
-- **Journal** — log results in R-multiples; get win rate, average win/loss,
-  expectancy and total R, plus a per-trade result chart.
+- **Journal** — log results in R-multiples tagged demo/live and by session;
+  win rate, average win/loss, expectancy, total R, an equity curve,
+  edge breakdowns by setup/pair/session, CSV import (MT4/MT5 reports work),
+  JSON backup/restore, and a weekly review form. The tracker tab adds a
+  live discipline guard (daily circuit breaker that locks the planner) and
+  a consistency-rule checker.
 - **Guide & Strategies** — condensed reference of the `docs/` content:
   fundamentals, risk rules, nine strategies, psychology, the funded-account
   playbook, and a glossary.
