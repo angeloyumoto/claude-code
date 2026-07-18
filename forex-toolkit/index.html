@@ -88,6 +88,16 @@
   .fold .fold-body { padding-top: 12px; }
   @media (prefers-reduced-motion: reduce) { .fold > summary::after { transition: none; } }
   tbody tr:hover td { background: rgba(77, 163, 255, .06); }
+  .sheet-wrap { max-height: 430px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .sheet { font-size: 13px; }
+  .sheet th { position: sticky; top: 0; background: var(--raised); z-index: 2; }
+  .sheet td { padding: 6px 10px; white-space: nowrap; }
+  .sheet td.wrap { white-space: normal; min-width: 160px; }
+  .sheet tbody tr:nth-child(even) td { background: rgba(255,255,255,.015); }
+  .sheet [data-f] { cursor: text; }
+  .sheet [data-f]:hover { box-shadow: inset 0 -1px 0 var(--faint); }
+  .sheet [data-f]:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--raised); }
+  .sheet .acct-pill { cursor: pointer; }
 
   .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .field label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
@@ -404,6 +414,26 @@
       </div>
       <div class="muted-note" id="t-verdict"></div>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3>Trade sheet</h3>
+      <div class="guide-tabs" id="sh-filter" style="margin:0">
+        <button class="ghost" data-sf="all" aria-selected="true">All</button>
+        <button class="ghost" data-sf="demo" aria-selected="false">Demo</button>
+        <button class="ghost" data-sf="live" aria-selected="false">Live</button>
+        <button class="ghost" id="sh-csv">Export CSV</button>
+      </div>
+    </div>
+    <p class="sub">Every trade in one sheet, newest first. Click any cell — date, pair, direction, session, setup, R, notes — to edit it in place; changes save instantly and update every stat, the roadmap gate and the discipline guard. Click the demo/live tag to flip it. ΣR is your running total.</p>
+    <div class="sheet-wrap table-wrap">
+      <table class="sheet">
+        <thead><tr><th class="num">#</th><th>Date</th><th>Pair</th><th>Dir</th><th>Acct</th><th>Session</th><th>Setup</th><th class="num">R</th><th class="num">ΣR</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="sh-body"></tbody>
+      </table>
+    </div>
+    <div class="muted-note" id="sh-total" style="margin-top:8px"></div>
   </div>
 
   <details class="card fold" style="margin-top:18px">
@@ -1597,7 +1627,86 @@
     renderBreaker();
     renderRoadmap();
     renderConsistency();
+    renderSheet();
   }
+
+  // ---------- trade sheet (tracker tab) ----------
+  var shFilter = "all";
+  document.querySelectorAll("#sh-filter [data-sf]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      shFilter = b.dataset.sf;
+      document.querySelectorAll("#sh-filter [data-sf]").forEach(function (o) { o.setAttribute("aria-selected", o === b ? "true" : "false"); });
+      renderSheet();
+    });
+  });
+  $("sh-csv").addEventListener("click", function () { $("ex-csv").click(); });
+  function renderSheet() {
+    var ts = state.trades.filter(function (t) { return shFilter === "all" || t.account === shFilter; });
+    var cum = 0;
+    var withCum = ts.map(function (t, i) { cum += t.r; return { t: t, i: i + 1, cum: cum }; });
+    $("sh-body").innerHTML = withCum.slice().reverse().map(function (row) {
+      var t = row.t;
+      function cell(f, v, cls) {
+        return "<td class='" + (cls || "") + "' data-f='" + f + "' contenteditable='true' spellcheck='false'>" + esc(v == null ? "" : v) + "</td>";
+      }
+      return "<tr data-id='" + t.id + "'>" +
+        "<td class='num' style='color:var(--faint)'>" + row.i + "</td>" +
+        cell("date", t.date, "mono") +
+        cell("pair", t.pair) +
+        cell("dir", t.dir) +
+        "<td><span class='pill acct-pill " + (t.account === "live" ? "neutral" : "ok") + "' title='Click to flip demo/live'>" + esc(t.account) + "</span></td>" +
+        cell("session", t.session === "—" ? "" : t.session) +
+        cell("setup", t.setup) +
+        cell("r", (t.r > 0 ? "+" : "") + fmt(t.r, 2), "num mono " + (t.r > 0 ? "pos" : "neg")) +
+        "<td class='num mono " + (row.cum >= 0 ? "pos" : "neg") + "'>" + (row.cum >= 0 ? "+" : "") + fmt(row.cum, 1) + "</td>" +
+        cell("notes", t.notes, "wrap") +
+        "<td><button class='del' data-del-sheet='" + t.id + "'>✕</button></td></tr>";
+    }).join("") || "<tr><td colspan='11' style='color:var(--faint)'>No trades yet — log them in the Journal tab or right here after your first import.</td></tr>";
+    var wins = ts.filter(function (t) { return t.r > 0; }).length;
+    $("sh-total").textContent = ts.length ? ts.length + " trades · " + wins + " wins / " + (ts.length - wins) + " losses · total " + (cum >= 0 ? "+" : "") + fmt(cum, 1) + "R" : "";
+    $("sh-body").querySelectorAll("[data-del-sheet]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.trades = state.trades.filter(function (x) { return x.id !== +b.dataset.delSheet; });
+        save(); renderJournal();
+      });
+    });
+    $("sh-body").querySelectorAll(".acct-pill").forEach(function (p) {
+      p.addEventListener("click", function () {
+        var id = +p.closest("tr").dataset.id;
+        var t = state.trades.filter(function (x) { return x.id === id; })[0];
+        if (t) { t.account = t.account === "live" ? "demo" : "live"; save(); renderJournal(); }
+      });
+    });
+  }
+  $("sh-body").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.target.closest("[data-f]")) { e.preventDefault(); e.target.blur(); }
+    if (e.key === "Escape" && e.target.closest("[data-f]")) { e.preventDefault(); renderSheet(); }
+  });
+  $("sh-body").addEventListener("focusout", function (e) {
+    var td = e.target.closest ? e.target.closest("[data-f]") : null;
+    if (!td) return;
+    var tr = td.closest("tr");
+    var t = state.trades.filter(function (x) { return x.id === +tr.dataset.id; })[0];
+    if (!t) return;
+    var f = td.dataset.f, v = td.textContent.trim();
+    var changed = false;
+    if (f === "r") {
+      var rv = parseFloat(v.replace(/[+R]/gi, ""));
+      if (isFinite(rv) && rv !== t.r) { t.r = Math.round(rv * 100) / 100; changed = true; }
+    } else if (f === "dir") {
+      var dv = /^s/i.test(v) ? "Short" : "Long";
+      if (dv !== t.dir) { t.dir = dv; changed = true; }
+    } else if (f === "pair") {
+      var pv = v.toUpperCase().slice(0, 14);
+      if (pv && pv !== t.pair) { t.pair = pv; changed = true; }
+    } else if (f === "session") {
+      if ((v || "—") !== t.session) { t.session = v || "—"; changed = true; }
+    } else {
+      if (v !== (t[f] || "")) { t[f] = v; changed = true; }
+    }
+    if (changed) { save(); renderJournal(); }
+    else { renderSheet(); }
+  });
 
   // ---------- discipline guard ----------
   ["dg-maxl", "dg-maxr"].forEach(function (id) {
