@@ -426,10 +426,10 @@
         <button class="ghost" id="sh-csv">Export CSV</button>
       </div>
     </div>
-    <p class="sub">Every trade in one sheet, newest first. Click any cell — date, pair, direction, session, setup, R, notes — to edit it in place; changes save instantly and update every stat, the roadmap gate and the discipline guard. Click the demo/live tag to flip it. ΣR is your running total.</p>
+    <p class="sub">Every trade with every number, newest first — scroll sideways for all columns. Click any cell to edit it in place; changes save instantly and update every stat, the roadmap gate and the discipline guard. Click the demo/live tag to flip it. RR is planned reward:risk from entry/SL/TP; P/L $ = R × risk $; ΣR / Σ$ are running totals.</p>
     <div class="sheet-wrap table-wrap">
       <table class="sheet">
-        <thead><tr><th class="num">#</th><th>Date</th><th>Pair</th><th>Dir</th><th>Acct</th><th>Session</th><th>Setup</th><th class="num">R</th><th class="num">ΣR</th><th>Notes</th><th></th></tr></thead>
+        <thead><tr><th class="num">#</th><th>Date</th><th>Pair</th><th>Dir</th><th>Acct</th><th>Session</th><th>Setup</th><th class="num">Entry</th><th class="num">SL</th><th class="num">TP</th><th class="num">Lots</th><th class="num">RR</th><th class="num">Risk %</th><th class="num">Risk $</th><th class="num">R</th><th class="num">P/L $</th><th class="num">ΣR</th><th class="num">Σ$</th><th>W/L</th><th>Notes</th><th></th></tr></thead>
         <tbody id="sh-body"></tbody>
       </table>
     </div>
@@ -609,6 +609,7 @@
     <div class="stat"><span class="lbl">Avg loss</span><b id="j-al">—</b><span class="note">in R</span></div>
     <div class="stat"><span class="lbl">Expectancy</span><b id="j-exp">—</b><span class="note">R per trade</span></div>
     <div class="stat"><span class="lbl">Total</span><b id="j-tot">—</b><span class="note">R, all trades</span></div>
+    <div class="stat"><span class="lbl">Net P/L</span><b id="j-pl">—</b><span class="note">$, from risk × R</span></div>
   </div>
 
   <div class="grid cols-2">
@@ -627,10 +628,20 @@
       </div>
       <div class="row">
         <div class="field"><label for="j-acct">Account</label><select id="j-acct"><option value="demo">Demo / backtest</option><option value="live">Live / evaluation</option></select></div>
-        <div class="field"><label for="j-sess">Session</label><select id="j-sess"><option>Auto</option><option>Tokyo</option><option>London</option><option>New York</option><option>Off-hours</option></select>
-          <div class="hint">Auto tags from the current Philippine time.</div>
+        <div class="field"><label for="j-sess">Session</label><select id="j-sess"><option>Auto</option><option>Tokyo</option><option>London</option><option>New York</option><option>Off-hours</option></select></div>
+        <div class="field"><label for="j-risk">Risk (%)</label><input id="j-risk" type="number" step="0.1" value="0.5" min="0">
+          <div class="hint">Used to compute risk $ and P/L $.</div>
         </div>
       </div>
+      <details class="fold">
+        <summary>Entry / SL / TP / lots (optional — fills the RR and price columns)</summary>
+        <div class="fold-body"><div class="row">
+          <div class="field"><label for="j-entry">Entry</label><input id="j-entry" type="number" step="0.0001"></div>
+          <div class="field"><label for="j-sl">Stop loss</label><input id="j-sl" type="number" step="0.0001"></div>
+          <div class="field"><label for="j-tp">Take profit</label><input id="j-tp" type="number" step="0.0001"></div>
+          <div class="field"><label for="j-lots">Lots</label><input id="j-lots" type="number" step="0.01"></div>
+        </div></div>
+      </details>
       <div class="field"><label for="j-notes">Notes (what you did well / broke)</label><textarea id="j-notes" rows="2"></textarea></div>
       <button class="action" id="j-add">Add to journal</button>
     </div>
@@ -1489,6 +1500,7 @@
         var p = state.plans.find(function (x) { return x.id === +b.dataset.log; });
         if (!p) return;
         $("j-pair").value = p.pair; $("j-dir").value = p.dir; $("j-setup").value = p.setup === "—" ? "" : p.setup;
+        $("j-risk").value = p.risk; $("j-entry").value = p.entry; $("j-sl").value = p.sl; $("j-tp").value = p.tp;
         $("j-date").value = new Date().toISOString().slice(0, 10);
         tabs.forEach(function (o) { o.setAttribute("aria-selected", o.dataset.tab === "journal" ? "true" : "false"); });
         ["roadmap", "tracker", "calc", "planner", "journal", "guide"].forEach(function (s) { $("sec-" + s).hidden = s !== "journal"; });
@@ -1499,7 +1511,13 @@
   renderPlans(); plCalc(); plScore();
 
   // ---------- journal ----------
-  state.trades.forEach(function (t) { if (!t.account) t.account = "demo"; if (!t.session) t.session = "—"; });
+  state.trades.forEach(function (t) {
+    if (!t.account) t.account = "demo";
+    if (!t.session) t.session = "—";
+    if (t.riskPct == null) t.riskPct = 0.5;
+    if (t.riskUsd == null) t.riskUsd = Math.round((parseFloat(state.settings["t-size"]) || 100000) * (parseFloat(t.riskPct) || 0.5) / 100);
+    if (t.pl == null) t.pl = Math.round(t.r * t.riskUsd * 100) / 100;
+  });
   state.reviews = state.reviews || [];
   var todayISO = new Date().toISOString().slice(0, 10);
   $("j-date").value = todayISO;
@@ -1523,15 +1541,26 @@
     return "Off-hours";
   }
 
+  if (state.settings.jRisk != null) $("j-risk").value = state.settings.jRisk;
+  $("j-risk").addEventListener("input", function () { state.settings.jRisk = this.value; save(); });
+  function tradeBalance() {
+    return parseFloat(state.settings["t-equity"]) || parseFloat(state.settings["t-size"]) || 100000;
+  }
   $("j-add").addEventListener("click", function () {
     var r = parseFloat($("j-r").value);
     if (!isFinite(r)) { $("j-r").focus(); return; }
+    var riskPct = num($("j-risk")) || 0.5;
+    var riskUsd = Math.round(tradeBalance() * riskPct / 100);
     state.trades.push({
       id: Math.floor(Math.random() * 1e9), date: $("j-date").value, pair: $("j-pair").value,
       dir: $("j-dir").value, r: r, setup: $("j-setup").value, notes: $("j-notes").value,
-      account: $("j-acct").value, session: resolveSession()
+      account: $("j-acct").value, session: resolveSession(),
+      riskPct: riskPct, riskUsd: riskUsd, pl: Math.round(r * riskUsd * 100) / 100,
+      entry: $("j-entry").value, sl: $("j-sl").value, tp: $("j-tp").value, lots: $("j-lots").value
     });
-    save(); $("j-r").value = ""; $("j-notes").value = ""; renderJournal();
+    save();
+    ["j-r", "j-notes", "j-entry", "j-sl", "j-tp", "j-lots"].forEach(function (id) { $(id).value = ""; });
+    renderJournal();
   });
 
   function renderCurve(ts) {
@@ -1592,8 +1621,12 @@
       var totEl = $("j-tot");
       totEl.textContent = (sum >= 0 ? "+" : "") + fmt(sum, 1);
       totEl.style.color = sum >= 0 ? "var(--good)" : "var(--bad)";
+      var plSum = t.reduce(function (a, x) { return a + (parseFloat(x.pl) || 0); }, 0);
+      var plEl = $("j-pl");
+      plEl.textContent = usd(plSum, 0);
+      plEl.style.color = plSum >= 0 ? "var(--good)" : "var(--bad)";
     } else {
-      ["j-wr", "j-aw", "j-al", "j-exp", "j-tot"].forEach(function (id) { $(id).textContent = "—"; $(id).style.color = ""; });
+      ["j-wr", "j-aw", "j-al", "j-exp", "j-tot", "j-pl"].forEach(function (id) { $(id).textContent = "—"; $(id).style.color = ""; });
     }
     // bars: last 40 trades, height scaled to max |R|
     var recent = t.slice(-40);
@@ -1640,15 +1673,26 @@
     });
   });
   $("sh-csv").addEventListener("click", function () { $("ex-csv").click(); });
+  function rrOf(t) {
+    var e = parseFloat(t.entry), s = parseFloat(t.sl), p = parseFloat(t.tp);
+    if (!isFinite(e) || !isFinite(s) || !isFinite(p) || e === s) return null;
+    return Math.abs(p - e) / Math.abs(e - s);
+  }
   function renderSheet() {
     var ts = state.trades.filter(function (t) { return shFilter === "all" || t.account === shFilter; });
-    var cum = 0;
-    var withCum = ts.map(function (t, i) { cum += t.r; return { t: t, i: i + 1, cum: cum }; });
+    var cum = 0, cumPl = 0;
+    var withCum = ts.map(function (t, i) {
+      cum += t.r; cumPl += parseFloat(t.pl) || 0;
+      return { t: t, i: i + 1, cum: cum, cumPl: cumPl };
+    });
     $("sh-body").innerHTML = withCum.slice().reverse().map(function (row) {
       var t = row.t;
       function cell(f, v, cls) {
         return "<td class='" + (cls || "") + "' data-f='" + f + "' contenteditable='true' spellcheck='false'>" + esc(v == null ? "" : v) + "</td>";
       }
+      var rr = rrOf(t);
+      var pl = parseFloat(t.pl);
+      var wl = t.r > 0 ? "<span class='pill ok'>W</span>" : t.r < 0 ? "<span class='pill bad'>L</span>" : "<span class='pill neutral'>BE</span>";
       return "<tr data-id='" + t.id + "'>" +
         "<td class='num' style='color:var(--faint)'>" + row.i + "</td>" +
         cell("date", t.date, "mono") +
@@ -1657,13 +1701,30 @@
         "<td><span class='pill acct-pill " + (t.account === "live" ? "neutral" : "ok") + "' title='Click to flip demo/live'>" + esc(t.account) + "</span></td>" +
         cell("session", t.session === "—" ? "" : t.session) +
         cell("setup", t.setup) +
+        cell("entry", t.entry, "num mono") +
+        cell("sl", t.sl, "num mono") +
+        cell("tp", t.tp, "num mono") +
+        cell("lots", t.lots, "num mono") +
+        "<td class='num mono'>" + (rr == null ? "—" : fmt(rr, 2)) + "</td>" +
+        cell("riskPct", t.riskPct === "" || t.riskPct == null ? "" : t.riskPct, "num mono") +
+        cell("riskUsd", t.riskUsd == null ? "" : t.riskUsd, "num mono") +
         cell("r", (t.r > 0 ? "+" : "") + fmt(t.r, 2), "num mono " + (t.r > 0 ? "pos" : "neg")) +
+        "<td class='num mono " + (pl >= 0 ? "pos" : "neg") + "'>" + (isFinite(pl) ? usd(pl, 0) : "—") + "</td>" +
         "<td class='num mono " + (row.cum >= 0 ? "pos" : "neg") + "'>" + (row.cum >= 0 ? "+" : "") + fmt(row.cum, 1) + "</td>" +
+        "<td class='num mono " + (row.cumPl >= 0 ? "pos" : "neg") + "'>" + usd(row.cumPl, 0) + "</td>" +
+        "<td>" + wl + "</td>" +
         cell("notes", t.notes, "wrap") +
         "<td><button class='del' data-del-sheet='" + t.id + "'>✕</button></td></tr>";
-    }).join("") || "<tr><td colspan='11' style='color:var(--faint)'>No trades yet — log them in the Journal tab or right here after your first import.</td></tr>";
+    }).join("") || "<tr><td colspan='21' style='color:var(--faint)'>No trades yet — log them in the Journal tab, or import a CSV there.</td></tr>";
     var wins = ts.filter(function (t) { return t.r > 0; }).length;
-    $("sh-total").textContent = ts.length ? ts.length + " trades · " + wins + " wins / " + (ts.length - wins) + " losses · total " + (cum >= 0 ? "+" : "") + fmt(cum, 1) + "R" : "";
+    var losses = ts.filter(function (t) { return t.r < 0; }).length;
+    var be = ts.length - wins - losses;
+    var avgRisk = ts.length ? ts.reduce(function (a, t) { return a + (parseFloat(t.riskPct) || 0); }, 0) / ts.filter(function (t) { return parseFloat(t.riskPct); }).length : 0;
+    $("sh-total").textContent = ts.length
+      ? ts.length + " trades · " + wins + "W / " + losses + "L" + (be ? " / " + be + "BE" : "") +
+        " · total " + (cum >= 0 ? "+" : "") + fmt(cum, 1) + "R · net " + usd(cumPl, 0) +
+        (isFinite(avgRisk) && avgRisk > 0 ? " · avg risk " + fmt(avgRisk, 2) + "%" : "")
+      : "";
     $("sh-body").querySelectorAll("[data-del-sheet]").forEach(function (b) {
       b.addEventListener("click", function () {
         state.trades = state.trades.filter(function (x) { return x.id !== +b.dataset.delSheet; });
@@ -1690,9 +1751,26 @@
     if (!t) return;
     var f = td.dataset.f, v = td.textContent.trim();
     var changed = false;
+    function recomputePl() {
+      var ru = parseFloat(t.riskUsd);
+      if (isFinite(ru)) t.pl = Math.round(t.r * ru * 100) / 100;
+    }
     if (f === "r") {
       var rv = parseFloat(v.replace(/[+R]/gi, ""));
-      if (isFinite(rv) && rv !== t.r) { t.r = Math.round(rv * 100) / 100; changed = true; }
+      if (isFinite(rv) && rv !== t.r) { t.r = Math.round(rv * 100) / 100; recomputePl(); changed = true; }
+    } else if (f === "riskPct") {
+      var pv2 = parseFloat(v.replace(/%/g, ""));
+      if (isFinite(pv2) && pv2 !== parseFloat(t.riskPct)) {
+        t.riskPct = pv2;
+        t.riskUsd = Math.round(tradeBalance() * pv2 / 100);
+        recomputePl(); changed = true;
+      }
+    } else if (f === "riskUsd") {
+      var uv = parseFloat(v.replace(/[$,]/g, ""));
+      if (isFinite(uv) && uv !== parseFloat(t.riskUsd)) { t.riskUsd = Math.round(uv); recomputePl(); changed = true; }
+    } else if (f === "entry" || f === "sl" || f === "tp" || f === "lots") {
+      var nv = v.replace(/[^0-9.\-]/g, "");
+      if (nv !== (t[f] || "")) { t[f] = nv; changed = true; }
     } else if (f === "dir") {
       var dv = /^s/i.test(v) ? "Short" : "Long";
       if (dv !== t.dir) { t.dir = dv; changed = true; }
@@ -1842,9 +1920,9 @@
   });
   $("ex-csv").addEventListener("click", function () {
     var q = function (s) { return '"' + String(s == null ? "" : s).replace(/"/g, '""') + '"'; };
-    var rows = [["date", "pair", "direction", "r", "setup", "notes", "account", "session"].join(",")];
+    var rows = [["date", "pair", "direction", "entry", "sl", "tp", "lots", "riskpct", "riskusd", "r", "profit", "setup", "notes", "account", "session"].join(",")];
     state.trades.forEach(function (t) {
-      rows.push([t.date, t.pair, t.dir, t.r, t.setup, t.notes, t.account, t.session].map(q).join(","));
+      rows.push([t.date, t.pair, t.dir, t.entry, t.sl, t.tp, t.lots, t.riskPct, t.riskUsd, t.r, t.pl, t.setup, t.notes, t.account, t.session].map(q).join(","));
     });
     download("yumoto-trades-journal.csv", rows.join("\n"), "text/csv");
   });
@@ -1899,7 +1977,13 @@
           r: rExact >= 0 ? rExact : findCol(header, ["rmultiple", "rresult"]),
           profit: findCol(header, ["profit", "netpl", "netprofit", "pl", "pnl"]),
           setup: findCol(header, ["setup", "strategy"]),
-          notes: findCol(header, ["notes", "note", "comment"])
+          notes: findCol(header, ["notes", "note", "comment"]),
+          entry: findCol(header, ["entry", "openprice"]),
+          sl: findCol(header, ["sl", "stoploss"]),
+          tp: findCol(header, ["tp", "takeprofit"]),
+          lots: findCol(header, ["lots", "volume", "size"]),
+          riskPct: findCol(header, ["riskpct"]),
+          riskUsd: findCol(header, ["riskusd"])
         };
         if (ci.r < 0 && ci.profit < 0) { throw new Error("no 'r' or 'profit' column found in the header"); }
         var riskUsd = num($("im-risk")) || 100, acct = $("im-acct").value, added = 0;
@@ -1909,6 +1993,11 @@
           if (!isFinite(rVal)) continue;
           var d = ci.date >= 0 ? String(c[ci.date] || "").slice(0, 10).replace(/\./g, "-").replace(/\//g, "-") : todayISO;
           var dirRaw = ci.dir >= 0 ? String(c[ci.dir] || "").toLowerCase() : "";
+          var numCol = function (idx) { return idx >= 0 ? String(c[idx] || "").replace(/[^0-9.\-]/g, "") : ""; };
+          var impRiskUsd = ci.riskUsd >= 0 && parseFloat(numCol(ci.riskUsd)) ? Math.round(parseFloat(numCol(ci.riskUsd))) : riskUsd;
+          var impPl = ci.profit >= 0 && isFinite(parseFloat(String(c[ci.profit] || "").replace(/[^0-9eE.+-]/g, "")))
+            ? Math.round(parseFloat(String(c[ci.profit]).replace(/[^0-9eE.+-]/g, "")) * 100) / 100
+            : Math.round(rVal * impRiskUsd * 100) / 100;
           state.trades.push({
             id: Math.floor(Math.random() * 1e9), date: d || todayISO,
             pair: ci.pair >= 0 ? (String(c[ci.pair] || "").toUpperCase().replace(/[^A-Z0-9 ()\/]/g, "").slice(0, 14) || "—") : "—",
@@ -1916,7 +2005,10 @@
             r: Math.round(rVal * 100) / 100,
             setup: ci.setup >= 0 ? (c[ci.setup] || "imported") : "imported",
             notes: ci.notes >= 0 ? (c[ci.notes] || "") : "",
-            account: acct, session: "—"
+            account: acct, session: "—",
+            entry: numCol(ci.entry), sl: numCol(ci.sl), tp: numCol(ci.tp), lots: numCol(ci.lots),
+            riskPct: ci.riskPct >= 0 && parseFloat(numCol(ci.riskPct)) ? parseFloat(numCol(ci.riskPct)) : "",
+            riskUsd: impRiskUsd, pl: impPl
           });
           added++;
         }
