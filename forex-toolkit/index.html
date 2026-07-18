@@ -248,8 +248,9 @@
           <option>ICT Silver Bullet</option>
           <option>ICT London Judas swing</option>
         </select>
-        <div class="hint">Rules for each are in the Guide tab. If unsure, take Pullback trend-following — fewest trades, most forgiving.</div>
+        <div class="hint">If unsure, take Pullback trend-following — fewest trades, most forgiving.</div>
       </div>
+      <button class="ghost" id="rm-tut">Open my strategy's tutorial →</button>
     </div>
 
     <div class="card">
@@ -673,6 +674,7 @@
   <div class="guide-tabs" role="tablist">
     <button class="ghost" role="tab" data-gtab="g-fund" aria-selected="true">Fundamentals</button>
     <button class="ghost" role="tab" data-gtab="g-risk" aria-selected="false">Risk rules</button>
+    <button class="ghost" role="tab" data-gtab="g-tut" aria-selected="false">Strategy tutorials</button>
     <button class="ghost" role="tab" data-gtab="g-strat" aria-selected="false">Core strategies</button>
     <button class="ghost" role="tab" data-gtab="g-adv" aria-selected="false">Advanced strategies</button>
     <button class="ghost" role="tab" data-gtab="g-smc" aria-selected="false">Smart money (ICT)</button>
@@ -712,6 +714,16 @@
     <h4>Why 0.5% risk wins evaluations</h4>
     <p>At 0.5% risk, a 5-trade losing streak — which <i>will</i> happen, even with a 55% win rate — costs ~2.5%, well inside a 5% daily / 10% overall limit. At 2% risk the same streak costs ~10% and the account is gone. You cannot pass a challenge you've already breached.</p>
     <div class="callout red"><b>Expectancy beats win rate.</b> Expectancy = (win% × avg win) − (loss% × avg loss). A 40% win rate with 2R winners earns 0.2R per trade; a 70% win rate with 0.3R winners and 1R losers loses money. Your journal tab computes this for you.</div>
+  </div>
+
+  <div class="card" id="g-tut" hidden>
+    <h3>Strategy tutorials — plain English, step by step</h3>
+    <p class="sub">Pick a strategy. Each tutorial: what it actually is, when to trade it in Philippine time, the steps, a worked example with real numbers, and the mistakes that cost beginners money.</p>
+    <div class="field" style="max-width:420px">
+      <label for="tut-sel">Choose a strategy</label>
+      <select id="tut-sel"></select>
+    </div>
+    <div id="tut-body" class="prose"></div>
   </div>
 
   <div class="card prose" id="g-strat" hidden>
@@ -969,9 +981,204 @@
   document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (t) {
     t.addEventListener("click", function () {
       document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (o) { o.setAttribute("aria-selected", o === t ? "true" : "false"); });
-      ["g-fund", "g-risk", "g-strat", "g-adv", "g-smc", "g-prop", "g-psy", "g-gloss"].forEach(function (id) { $(id).hidden = id !== t.dataset.gtab; });
+      ["g-fund", "g-risk", "g-tut", "g-strat", "g-adv", "g-smc", "g-prop", "g-psy", "g-gloss"].forEach(function (id) { $(id).hidden = id !== t.dataset.gtab; });
     });
   });
+
+  // ---------- strategy tutorials ----------
+  var TUTORIALS = [
+    { id: "pullback", name: "Pullback trend-following", level: "Beginner", levelSt: "ok",
+      time: "Flexible — best 15:00–18:00 or 20:30–24:00 PHT", pairs: "Any major",
+      what: "Markets that trend don't move in straight lines — they take two steps forward, one step back. This strategy buys the \"step back\" in an uptrend (or sells it in a downtrend), so you enter at a discount just as the trend gets going again. It's the recommended first strategy: few trades, forgiving entries, high reward for the risk.",
+      need: "Any charting app (TradingView's free plan is fine) with a 50 EMA added to the Daily, 4-hour and 1-hour charts.",
+      steps: [
+        "Find the trend. On the Daily AND 4-hour chart, price must be above a rising 50 EMA — that's an uptrend, so you only look for buys. Below a falling 50 EMA on both → only sells. If the two charts disagree → skip this pair today.",
+        "Wait for the pullback. Price dips back toward the 20–50 EMA zone, or to a level that used to be resistance (old ceilings become new floors).",
+        "Wait for the signal. On the 1-hour chart, you want a bullish engulfing candle or a pin bar rejecting the zone. No signal = no trade, even if the zone looks perfect.",
+        "Place the trade. Stop-loss a few pips below the pullback's lowest point. Size it with the Position Size calculator at 0.5% risk.",
+        "Target the most recent high, or 2× your risk — whichever is nearer. Then walk away from the screen."
+      ],
+      ex: "EURUSD Daily and H4 are both above a rising 50 EMA. Price pulls back from 1.0920 to 1.0860 — right at the H4 50 EMA plus an old resistance line. An H1 bullish engulfing candle prints. You buy at 1.0865, stop 1.0840 (25 pips), target 1.0915 (2R). On a $100,000 account risking 0.5% ($500), the calculator says 2.0 lots.",
+      avoid: [
+        "Entering at the zone without a signal candle — that's catching a falling knife.",
+        "Trading against the Daily trend because the pullback \"looks deep\".",
+        "Moving your stop further away when price gets close to it."
+      ],
+      check: ["Daily + H4 agree on trend", "Pullback into EMA zone or old level", "H1 rejection candle printed", "Stop beyond the swing, 0.5% risk", "Target ≥ 1.5R"] },
+
+    { id: "breakout", name: "London breakout", level: "Beginner", levelSt: "ok",
+      time: "14:30–18:00 PHT (London open)", pairs: "EURUSD, GBPUSD",
+      what: "During the quiet Tokyo hours, EURUSD and GBPUSD build a tight range. When London wakes up — 3 PM your time — the first big push often breaks that range and keeps running. You trade that first push, but only after it proves itself with a close and a retest.",
+      need: "A 15-minute or 30-minute chart of EURUSD or GBPUSD, and free time between 14:30 and 18:00 PHT.",
+      steps: [
+        "At about 14:30 PHT, mark the highest and lowest price of the overnight session (roughly the last 7 hours). Skip the day entirely if that range is bigger than ~50 pips, or if red-folder news lands before 18:00 PHT.",
+        "Wait for a 15m/30m candle to CLOSE outside the range. A wick poking out does not count.",
+        "Don't chase the breakout candle. Wait for price to come back and touch the broken line — the retest — then enter in the breakout direction.",
+        "Stop-loss on the other side of the retest swing (usually 10–20 pips). Target 1.5–2R, or yesterday's high/low if it's closer.",
+        "Nothing by 19:00 PHT? Close the charts. The edge lives in the opening burst — after that it's gone."
+      ],
+      ex: "Asian range: 1.0850–1.0872 (22 pips — nice and tight). At 15:30 PHT a 15-minute candle closes at 1.0880, above the range. Price dips back to 1.0872 — you buy the retest, stop 1.0860 (12 pips), target 1.0896 (2R). The whole trade is over by 16:30 PHT.",
+      avoid: [
+        "Buying the first candle that pokes out — fake breakouts love the London open.",
+        "Flipping direction after a failed break. One loss, done, tomorrow's another range.",
+        "Trading it on wide-range days — breakouts need compression first."
+      ],
+      check: ["Range marked before 15:00 PHT", "Range roughly 15–50 pips", "Candle CLOSED outside", "Entered on the retest", "No red news before 18:00 PHT"] },
+
+    { id: "range", name: "Range trading at extremes", level: "Beginner+", levelSt: "ok",
+      time: "Quiet periods — Tokyo hours or between news cycles", pairs: "EURGBP, AUDNZD, quiet majors",
+      what: "When a pair is stuck between a floor and a ceiling for days, you can literally buy low and sell high: fade each touch of the edges, take profit in the middle. The skill is knowing when the range is real — and when it's about to die.",
+      need: "A 1-hour and 4-hour chart; a pair that's clearly been sideways for at least a week.",
+      steps: [
+        "Qualify the range: at least two clean bounces off BOTH the top and the bottom, and at least ~40 pips tall. Fewer touches or narrower → not tradeable.",
+        "Wait for price to touch an edge — then wait again, for a rejection candle (pin bar or engulfing on H1) at that edge.",
+        "Enter toward the middle. Stop-loss just past the edge, beyond the range's most recent fake-out wick.",
+        "Target the middle of the range (safe) or the far side (ambitious). Taking half at the middle is a good compromise.",
+        "The kill switch: if ANY 4-hour candle closes outside the range, the range is dead. Close everything, delete pending orders, stand aside."
+      ],
+      ex: "EURGBP has bounced between 0.8420 and 0.8480 for two weeks. Price touches 0.8480 and prints an H1 pin bar. You sell at 0.8474, stop 0.8492 (18 pips), first target 0.8450 (the middle, ~1.3R), runner toward 0.8430.",
+      avoid: [
+        "Fading an edge without a rejection signal — a strong touch is often the breakout starting.",
+        "Trading ranges right before big news. News is what kills ranges.",
+        "Staying in after an H4 close outside, \"hoping\" it comes back."
+      ],
+      check: ["2+ touches on both edges", "Range ≥ 40 pips", "Rejection candle at the edge", "Stop past the edge", "No imminent news"] },
+
+    { id: "swing", name: "Higher-timeframe swing", level: "Beginner (slow)", levelSt: "ok",
+      time: "20–30 minutes any evening — trades last days to weeks", pairs: "Majors + EURJPY/GBPJPY",
+      what: "The slowest, calmest strategy: daily charts only, twenty minutes each evening, and trades that last days to weeks. Perfect around a day job. It's the pullback strategy moved one level up — daily-chart entries at weekly levels.",
+      need: "A Daily and Weekly chart of the majors. Mostly, patience.",
+      steps: [
+        "Each evening, check the Weekly chart: which way is it trending? Mark the two or three levels that are obvious even from across the room.",
+        "Wait for price to pull back to one of those levels IN the trend direction. This can take days or weeks — that's the strategy, not a problem.",
+        "Wait for a Daily rejection candle at the level (pin bar or engulfing).",
+        "Enter the next day. Stop past the signal candle's extreme — often 40–80 pips, which is fine: the calculator simply gives you fewer lots for the same 0.5% risk.",
+        "Target the next weekly level, minimum 2R. Check the trade once a day, never once an hour."
+      ],
+      ex: "GBPUSD's weekly chart trends up and pulls back to 1.2600, a weekly support. A daily pin bar rejects it. You buy at 1.2650, stop 1.2570 (80 pips), target 1.2810 (2R). At 0.5% of $100,000 = $500 risk, the wide stop means just 0.62 lots. The trade takes nine days to play out.",
+      avoid: [
+        "Checking the chart hourly and panic-closing on normal wiggles.",
+        "Holding over the weekend if your prop firm forbids it — check the rule.",
+        "Sizing like an intraday trade. A wide stop means FEWER lots, same dollar risk."
+      ],
+      check: ["Weekly trend clear", "Daily signal AT a weekly level", "Stop past the signal candle", "Size recomputed for the wide stop", "Weekend rule checked"] },
+
+    { id: "retest", name: "Break and retest", level: "Intermediate", levelSt: "warn",
+      time: "London or New York hours", pairs: "Any major",
+      what: "When an important level finally breaks, price very often comes back to \"kiss it goodbye\" before the real move. The old ceiling becomes the new floor. Instead of chasing the breakout, you leave a limit order at that kiss — better price, better proof, calmer entry.",
+      need: "1-hour and 4-hour charts, and the patience to sometimes miss the move entirely.",
+      steps: [
+        "Find a level the market clearly respected at least twice. The more obvious it is, the more likely the retest — everyone sees the same line.",
+        "Wait for a full-bodied H1/H4 candle to CLOSE through it. A wick through it means nothing.",
+        "Do NOT chase. Place a limit order right at the broken level and wait.",
+        "Stop past the small swing that forms after the break. Target the next structural level — take it only if that's at least 2R away.",
+        "If price never comes back, you miss the trade. That is the strategy working correctly, not failing — there's always another level."
+      ],
+      ex: "USDJPY has bounced off 150.00 three times. An H4 candle finally closes at 150.35. You set a limit buy at 150.05. It fills during the next session; stop 149.70 (35 pips), target 150.75 (2R).",
+      avoid: [
+        "Entering on the breakout candle itself — worst price, tightest emotions.",
+        "Counting a wick through the level as a \"break\" — you need a close.",
+        "Ignoring a retest that closes back through the level. That's a failed break: exit immediately."
+      ],
+      check: ["Level touched 2+ times before breaking", "Full candle close through it", "Limit order at the level — no chasing", "Stop past the new swing", "Next level ≥ 2R away"] },
+
+    { id: "ma", name: "MA crossover baseline (mechanical)", level: "Beginner (mechanical)", levelSt: "ok",
+      time: "Check once per 4-hour candle close — any schedule", pairs: "2–3 trending majors",
+      what: "A fully mechanical system with zero judgment calls — the training-wheels strategy. Its rules are so objective a spreadsheet could trade it. You won't get rich from it, but you'll learn flawless execution, and it becomes the benchmark your discretionary trading has to beat.",
+      need: "An H4 chart with a 20 EMA and 50 EMA; a Daily chart with a 200 EMA; the ADX indicator as an optional filter.",
+      steps: [
+        "Check the Daily 200 EMA. Price above it and the line sloping up → you only take longs. Below and sloping down → only shorts.",
+        "On H4, wait for the 20 EMA to cross above the 50 EMA (for a long). Enter when the crossover candle closes.",
+        "Stop below the last H4 swing low. Skip the signal if ADX is under 20 — the market's asleep and crossovers whipsaw.",
+        "Exit at 2R, or when the EMAs cross back. Pick ONE of those two rules before you start and never switch mid-test.",
+        "Take EVERY qualifying signal for 30 trades. The system only works if you don't cherry-pick — its edge is never missing the big trend."
+      ],
+      ex: "AUDUSD sits above a rising Daily 200 EMA. On H4 the 20 EMA crosses above the 50, ADX reads 24. You enter at 0.6620 on the candle close, stop below the swing at 0.6585 (35 pips), exit at 2R = 0.6690.",
+      avoid: [
+        "Skipping signals that \"don't feel right\" — that invalidates the whole test.",
+        "Trading it in sideways markets without the ADX filter.",
+        "Changing the exit rule after a couple of losses."
+      ],
+      check: ["Daily 200 EMA filter passed", "H4 crossover candle closed", "ADX > 20", "One exit rule, chosen in advance", "Every signal taken"] },
+
+    { id: "ict4", name: "ICT 4-step liquidity sweep", level: "Advanced", levelSt: "bad",
+      time: "Killzones only: 14:00–17:00 or 20:30–23:30 PHT", pairs: "EURUSD, GBPUSD, GBPJPY",
+      what: "The prop-firm favorite. Big players need your stop-losses to fill their orders, so price often spikes past an obvious high or low — grabbing everyone's stops — then reverses hard. This strategy waits for that trap to spring, demands confirmation, and rides the reversal with a tiny stop.",
+      need: "15m + 5m + 1m charts, free time in a killzone, and the Smart Money guide tab read at least twice. Trade it on demo until the pattern is obvious to you.",
+      steps: [
+        "Before the session, draw your liquidity map: yesterday's high/low, the Asian and London session highs/lows, and any equal highs/lows. These are both your triggers and your targets.",
+        "In the killzone, wait for price to spike THROUGH one of those levels and close back inside — a long wick poking through. That's the trap springing.",
+        "Confirm on the 5-minute: a break of structure or an inverse fair value gap in the new direction. No confirmation = no trade, no matter how pretty the sweep.",
+        "Wait for the pullback — it shows up as a small 1-minute push against the new direction, into the fresh gap or about halfway back up the impulse.",
+        "Enter when the 1-minute breaks structure back in your direction. Stop past the spike's wick. Target the OPPOSITE mapped level; take half at the first level and move the stop to breakeven."
+      ],
+      ex: "20:35 PHT: GBPUSD spikes 8 pips above yesterday's high at 1.2740 and closes back below it. The 5m breaks structure down at 1.2725. The 1m pulls back to 1.2733 — into the gap — then breaks down again. You sell 1.2731, stop 1.2747 (16 pips), first target the Asian low at 1.2700 (~2R), runner toward the London low.",
+      avoid: [
+        "Entering on the spike itself before any confirmation.",
+        "Trading it outside killzone hours — the identical pattern fails far more often mid-day.",
+        "Fading sweeps on strong trend days. In a trend, a sweep is usually continuation, not reversal."
+      ],
+      check: ["Liquidity map drawn before the session", "Sweep with a close back inside", "5m break of structure or inverse FVG", "1m trigger after the pullback", "Stop past the wick, target = opposite pool"] },
+
+    { id: "silver", name: "ICT Silver Bullet", level: "Intermediate+", levelSt: "warn",
+      time: "One fixed hour: 22:00–23:00 PHT (23:00–24:00 Nov–Mar)", pairs: "EURUSD, GBPUSD, indices",
+      what: "The most structured ICT setup there is: one fixed hour, one pattern, in or out. During the window you look for the first fair value gap in the direction price is already reaching, and ride it toward the obvious target. If nothing appears in the hour — there is no trade today. The window IS the strategy.",
+      need: "A 5m/1m chart and a free hour at 22:00–23:00 PHT. Very day-job friendly.",
+      steps: [
+        "Before 22:00 PHT, answer one question: which obvious level is price reaching for? Yesterday's low? This week's high? That's your target — write it down.",
+        "From 22:00, watch for a strong three-candle burst in that direction which leaves a gap (candle 1's wick and candle 3's wick don't touch).",
+        "Place a limit order at the near edge of that gap. Stop past the small swing that created it.",
+        "Only take the trade if the target is at least 2R away. Less than that → skip, even if everything else is perfect.",
+        "23:00 arrives with no setup? Close the platform, journal \"no trade\", done. Zero-trade days are wins on a funded account."
+      ],
+      ex: "Your target: yesterday's low at 1.0800, with price at 1.0830 as the window opens. At 22:15 PHT a strong 5m drop leaves a gap between 1.0824 and 1.0819. Limit sell at 1.0822, stop 1.0832 (10 pips), target 1.0801 — about 2.1R. Filled at 22:30, target hit before midnight.",
+      avoid: [
+        "Forcing a mediocre gap because the hour is running out.",
+        "Taking gaps that point AGAINST the draw direction.",
+        "Accepting less than 2R — the fixed window only pays because the winners are big."
+      ],
+      check: ["Target level chosen before the window", "Gap forms inside the window, toward the target", "Limit at the gap edge", "≥ 2R to target", "No setup = no trade, no exceptions"] },
+
+    { id: "judas", name: "ICT London Judas swing", level: "Advanced", levelSt: "bad",
+      time: "London open: 14:00–16:00 PHT", pairs: "EURUSD, GBPUSD",
+      what: "London's famous head-fake. At the open, the first move often runs the WRONG way — just far enough to grab the stops sitting above or below the overnight range — before the real move of the day launches in the opposite direction. You skip the fake and board the real one.",
+      need: "15m/5m chart of EURUSD or GBPUSD, free at 14:00–16:00 PHT, and the discipline to wait for the confirmation move.",
+      steps: [
+        "Mark the Asian range — roughly 08:00–14:00 PHT — high and low.",
+        "At the London open, watch the first push. If it spikes through one side of the range and stalls (long wicks, no follow-through), that may be the Judas swing.",
+        "Wait for a FAST, full-bodied move back through the range that breaks 5-minute structure — traders call this displacement. A slow drift back doesn't count.",
+        "Enter on the pullback into the gap that fast move left behind. Stop past the fake-out's extreme.",
+        "Target the other side of the Asian range first, then yesterday's high or low."
+      ],
+      ex: "Asian range: 1.0840–1.0862. At 14:10 PHT price spikes to 1.0871 and stalls with long wicks. At 14:40 a powerful drop cuts back through 1.0850, breaking structure and leaving a gap at 1.0855–1.0851. You sell the pullback at 1.0853, stop 1.0873 (20 pips), targeting 1.0820 beyond the range low.",
+      avoid: [
+        "Assuming EVERY opening spike is fake — without the displacement back, you might be shorting a genuine breakout.",
+        "Trading it on mornings with UK/EU red-folder news.",
+        "Entering before the fast move back confirms the trap."
+      ],
+      check: ["Asian range marked", "Opening spike through one side, then a stall", "Fast displacement back through the range", "Entry on the gap pullback", "Stop past the fake-out wick"] }
+  ];
+
+  var tutSel = $("tut-sel");
+  TUTORIALS.forEach(function (t) {
+    var o = document.createElement("option"); o.value = t.id; o.textContent = t.name + " — " + t.level; tutSel.appendChild(o);
+  });
+  function renderTutorial() {
+    var t = TUTORIALS.filter(function (x) { return x.id === tutSel.value; })[0] || TUTORIALS[0];
+    $("tut-body").innerHTML =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 2px">' +
+      '<span class="pill ' + t.levelSt + '">' + esc(t.level) + "</span>" +
+      '<span class="muted-note">🕐 ' + esc(t.time) + " · " + esc(t.pairs) + "</span></div>" +
+      "<h3>What it is</h3><p>" + t.what + "</p>" +
+      "<h4>What you need</h4><p>" + t.need + "</p>" +
+      "<h3>Step by step</h3><ol>" + t.steps.map(function (s) { return "<li>" + s + "</li>"; }).join("") + "</ol>" +
+      "<h3>Worked example</h3><div class=\"callout\">" + t.ex + "</div>" +
+      "<h4>The mistakes that cost money</h4><ul>" + t.avoid.map(function (s) { return "<li>" + s + "</li>"; }).join("") + "</ul>" +
+      "<h4>Quick checklist before entering</h4><ul>" + t.check.map(function (s) { return "<li>" + s + "</li>"; }).join("") + "</ul>" +
+      '<p class="muted-note">Practice on demo and log every attempt in the Journal (account: Demo) — the Roadmap gate tells you when it\'s working. Full rule-sets live in the strategy docs.</p>';
+  }
+  tutSel.addEventListener("change", renderTutorial);
+  renderTutorial();
 
   // ---------- pairs & pip math (USD account) ----------
   var PAIRS = {
@@ -1439,6 +1646,19 @@
   $("rm-c1").addEventListener("change", function () { state.settings.rm1 = this.checked ? "1" : ""; save(); renderRoadmap(); });
   if (state.settings.rmStrat) $("rm-strat").value = state.settings.rmStrat;
   $("rm-strat").addEventListener("change", function () { state.settings.rmStrat = this.value; save(); renderRoadmap(); });
+  var RM_TUT_MAP = {
+    "Pullback trend-following (recommended first)": "pullback", "London breakout": "breakout",
+    "Range trading at extremes": "range", "Higher-timeframe swing": "swing", "Break and retest": "retest",
+    "MA crossover baseline (mechanical)": "ma", "ICT 4-step liquidity sweep": "ict4",
+    "ICT Silver Bullet": "silver", "ICT London Judas swing": "judas"
+  };
+  $("rm-tut").addEventListener("click", function () {
+    var id = RM_TUT_MAP[state.settings.rmStrat] || "pullback";
+    document.querySelector('nav [data-tab="guide"]').click();
+    document.querySelector('.guide-tabs [data-gtab="g-tut"]').click();
+    $("tut-sel").value = id;
+    renderTutorial();
+  });
   function setRmPill(id, st, txt) { var p = $(id); p.className = "pill " + st; p.textContent = txt; }
   function renderRoadmap() {
     var s1 = state.settings.rm1 === "1";
