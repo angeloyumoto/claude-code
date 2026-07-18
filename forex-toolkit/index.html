@@ -45,9 +45,14 @@
   }
   .tab {
     appearance: none; background: none; border: none; cursor: pointer;
-    padding: 12px 14px; font: 600 14px/1 inherit; color: var(--muted);
+    padding: 14px 16px; font: 600 14.5px/1 inherit; color: var(--muted);
     border-bottom: 2px solid transparent; white-space: nowrap;
   }
+  .strip { background: var(--surface); border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--muted); }
+  .strip-inner { max-width: 1100px; margin: 0 auto; padding: 7px 20px; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+  .strip .mono { color: var(--accent-ink); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+  .dot.ok { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); } .dot.neutral { background: var(--faint); }
   .tab:hover { color: var(--ink); }
   .tab[aria-selected="true"] { color: var(--accent-ink); border-bottom-color: var(--accent); }
   .tab:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
@@ -60,16 +65,29 @@
   .section-head h2 { font-size: 22px; }
   .section-head p { color: var(--muted); margin: 4px 0 0; max-width: 68ch; }
 
-  .grid { display: grid; gap: 16px; }
+  .grid { display: grid; gap: 18px; }
   .cols-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
   .cols-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 
   .card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 18px; box-shadow: var(--shadow);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; box-shadow: var(--shadow);
   }
   .card h3 { font-size: 16.5px; margin-bottom: 4px; }
   .card .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  details.fold { border: none; }
+  .fold > summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px;
+    font-weight: 600; font-size: 13.5px; color: var(--muted); padding: 2px 0; user-select: none;
+  }
+  .fold > summary::-webkit-details-marker { display: none; }
+  .fold > summary::after { content: "▾"; margin-left: auto; color: var(--faint); transition: transform .15s; }
+  .fold[open] > summary::after { transform: rotate(180deg); }
+  .fold > summary:hover { color: var(--ink); }
+  .fold > summary h3 { font-size: 16.5px; color: var(--ink); }
+  .fold .fold-body { padding-top: 12px; }
+  @media (prefers-reduced-motion: reduce) { .fold > summary::after { transition: none; } }
+  tbody tr:hover td { background: rgba(255, 140, 46, .05); }
 
   .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .field label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
@@ -176,13 +194,22 @@
 <nav aria-label="Sections">
   <div class="nav-inner" role="tablist">
     <button class="tab" role="tab" data-tab="roadmap" aria-selected="true">Roadmap</button>
-    <button class="tab" role="tab" data-tab="tracker" aria-selected="false">Funded Tracker</button>
+    <button class="tab" role="tab" data-tab="tracker" aria-selected="false">Tracker</button>
     <button class="tab" role="tab" data-tab="calc" aria-selected="false">Calculators</button>
-    <button class="tab" role="tab" data-tab="planner" aria-selected="false">Trade Planner</button>
+    <button class="tab" role="tab" data-tab="planner" aria-selected="false">Planner</button>
     <button class="tab" role="tab" data-tab="journal" aria-selected="false">Journal</button>
-    <button class="tab" role="tab" data-tab="guide" aria-selected="false">Guide &amp; Strategies</button>
+    <button class="tab" role="tab" data-tab="guide" aria-selected="false">Guide</button>
   </div>
 </nav>
+
+<div class="strip">
+  <div class="strip-inner">
+    <span class="mono" id="st-time">—</span>
+    <span id="st-kz">—</span>
+    <span id="st-guard">—</span>
+    <span id="st-gate">—</span>
+  </div>
+</div>
 
 <main>
 
@@ -273,20 +300,25 @@
     <p>Enter your challenge rules (Equity Edge and most prop firms publish these on the account dashboard), then update your equity each day. The tracker shows how much room you have left before a breach — and how much you can safely risk today.</p>
   </div>
 
-  <div class="card" style="margin-bottom:16px">
+  <div class="card" style="margin-bottom:18px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
       <h3>Market clock — Philippine time</h3>
       <div class="mono" id="mc-now" style="font-size:18px;color:var(--accent-ink)">—</div>
     </div>
-    <p class="sub">Session opens and closes converted to PHT (UTC+8). Manila has no daylight saving but New York and London do, so these times shift by an hour twice a year — the table recomputes them automatically.</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Session</th><th>Local hours</th><th class="num">In Philippine time</th><th>Status</th><th>Why it matters</th></tr></thead>
-        <tbody id="mc-body"></tbody>
-      </table>
-    </div>
-    <div class="hint" style="margin-top:8px">Sweet spots from the Philippines: <b>15:00–18:00 PHT</b> (London open — afternoon) and <b>20:30–24:00 PHT</b> (New York open &amp; the London/NY overlap — evening, ideal around a day job). Tokyo morning 08:00–11:00 PHT suits JPY/AUD pairs. Avoid ~04:00–06:00 PHT: rollover, widest spreads, thinnest liquidity. News in PHT: NFP first Friday 20:30 · CPI ~mid-month 20:30 · FOMC 02:00 (next day).</div>
-    <div class="hint" id="mc-next" style="margin-top:8px;color:var(--accent-ink);font-weight:600;font-size:13.5px"></div>
+    <div class="hint" id="mc-next" style="margin-top:6px;color:var(--accent-ink);font-weight:600;font-size:13.5px"></div>
+    <details class="fold" style="margin-top:10px">
+      <summary>All sessions &amp; best times to trade</summary>
+      <div class="fold-body">
+        <p class="sub">Session opens and closes converted to PHT (UTC+8). Manila has no daylight saving but New York and London do, so these times shift by an hour twice a year — the table recomputes them automatically.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Session</th><th>Local hours</th><th class="num">In Philippine time</th><th>Status</th><th>Why it matters</th></tr></thead>
+            <tbody id="mc-body"></tbody>
+          </table>
+        </div>
+        <div class="hint" style="margin-top:8px">Sweet spots from the Philippines: <b>15:00–18:00 PHT</b> (London open — afternoon) and <b>20:30–24:00 PHT</b> (New York open &amp; the London/NY overlap — evening, ideal around a day job). Tokyo morning 08:00–11:00 PHT suits JPY/AUD pairs. Avoid ~04:00–06:00 PHT: rollover, widest spreads, thinnest liquidity. News in PHT: NFP first Friday 20:30 · CPI ~mid-month 20:30 · FOMC 02:00 (next day).</div>
+      </div>
+    </details>
   </div>
 
   <div class="card" style="margin-bottom:16px">
@@ -295,11 +327,14 @@
       <span class="pill ok" id="dg-pill">clear</span>
     </div>
     <p class="sub">The daily circuit breaker from the risk rules, enforced live from today's journal entries. When it trips, you're done for the day and the Trade Planner locks until tomorrow.</p>
-    <div class="row">
-      <div class="field"><label for="dg-maxl">Stop after (consecutive losses)</label><input id="dg-maxl" type="number" value="2" min="1" step="1"></div>
-      <div class="field"><label for="dg-maxr">Stop at (net R lost today)</label><input id="dg-maxr" type="number" value="2" min="0.5" step="0.5"></div>
-    </div>
     <label class="check"><input type="checkbox" id="dg-news"><div><b>News checked for today</b><p>High-impact releases reviewed against your firm's news rule before trading.</p></div></label>
+    <details class="fold">
+      <summary>Adjust limits (default: 2 losses or −2R)</summary>
+      <div class="fold-body"><div class="row">
+        <div class="field"><label for="dg-maxl">Stop after (consecutive losses)</label><input id="dg-maxl" type="number" value="2" min="1" step="1"></div>
+        <div class="field"><label for="dg-maxr">Stop at (net R lost today)</label><input id="dg-maxr" type="number" value="2" min="0.5" step="0.5"></div>
+      </div></div>
+    </details>
     <div class="stat-row" style="margin-top:8px">
       <div class="stat"><span class="lbl">Trades today</span><b id="dg-n">0</b></div>
       <div class="stat"><span class="lbl">Net R today</span><b id="dg-net">0.0</b></div>
@@ -370,14 +405,16 @@
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px">
-    <h3>Consistency-rule check</h3>
-    <p class="sub">Many firms (Equity Edge-style) cap how much of your total profit may come from a single day. Approximated here in R from your <b>live</b> journal entries — accurate while you risk a fixed % per trade. Verify the exact rule on your firm's dashboard.</p>
-    <div class="row" style="max-width:280px">
-      <div class="field"><label for="cs-cap">Firm's single-day cap (%)</label><input id="cs-cap" type="number" value="40" min="5" max="100" step="5"></div>
+  <details class="card fold" style="margin-top:18px">
+    <summary><h3>Consistency-rule check</h3></summary>
+    <div class="fold-body">
+      <p class="sub">Many firms (Equity Edge-style) cap how much of your total profit may come from a single day. Approximated here in R from your <b>live</b> journal entries — accurate while you risk a fixed % per trade. Verify the exact rule on your firm's dashboard.</p>
+      <div class="row" style="max-width:280px">
+        <div class="field"><label for="cs-cap">Firm's single-day cap (%)</label><input id="cs-cap" type="number" value="40" min="5" max="100" step="5"></div>
+      </div>
+      <div class="result" id="cs-out"></div>
     </div>
-    <div class="result" id="cs-out"></div>
-  </div>
+  </details>
 </section>
 
 <!-- ============ CALCULATORS ============ -->
@@ -594,8 +631,9 @@
   </div>
 
   <div class="grid cols-2" style="margin-top:16px">
-    <div class="card">
-      <h3>Backup &amp; import</h3>
+    <details class="card fold">
+      <summary><h3>Backup &amp; import</h3></summary>
+      <div class="fold-body">
       <p class="sub">All data lives only in this browser — clearing browser data wipes it. Export a backup regularly.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
         <button class="ghost" id="ex-json">Export backup (JSON)</button>
@@ -608,9 +646,11 @@
       </div>
       <button class="action" id="im-btn">Import file</button>
       <div class="hint" id="im-msg" style="margin-top:8px">CSV needs a header row. Recognized columns: date/time/open time, symbol/pair, type/direction (buy/sell), profit (or an R column), setup, notes — MT4/MT5 report exports work. If no R column, R = profit ÷ risk $.</div>
-    </div>
-    <div class="card">
-      <h3>Weekly review (10 minutes, every weekend)</h3>
+      </div>
+    </details>
+    <details class="card fold">
+      <summary><h3>Weekly review (10 min, weekends)</h3></summary>
+      <div class="fold-body">
       <p class="sub">The habit that separates traders who improve from traders who repeat. Answers are saved below.</p>
       <div class="field"><label for="wr-1">1 · Expectancy this week vs last 30 trades — trending up or down?</label><textarea id="wr-1" rows="2"></textarea></div>
       <div class="field"><label for="wr-2">2 · Rules broken this week (risk %, daily stop, moved stop, correlation)?</label><textarea id="wr-2" rows="2"></textarea></div>
@@ -618,7 +658,8 @@
       <div class="field"><label for="wr-4">4 · The ONE thing to change next week</label><textarea id="wr-4" rows="2"></textarea></div>
       <button class="action" id="wr-save">Save review</button>
       <div id="wr-list" style="margin-top:12px"></div>
-    </div>
+      </div>
+    </details>
   </div>
 </section>
 
@@ -914,8 +955,17 @@
       ["roadmap", "tracker", "calc", "planner", "journal", "guide"].forEach(function (s) {
         $("sec-" + s).hidden = s !== t.dataset.tab;
       });
+      state.settings.lastTab = t.dataset.tab; save();
+      window.scrollTo(0, 0);
     });
   });
+  (function () {
+    var lt = state.settings.lastTab;
+    if (lt && lt !== "roadmap") {
+      var lb = document.querySelector('nav [data-tab="' + lt + '"]');
+      if (lb) lb.click();
+    }
+  })();
   document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (t) {
     t.addEventListener("click", function () {
       document.querySelectorAll(".guide-tabs [role=tab]").forEach(function (o) { o.setAttribute("aria-selected", o === t ? "true" : "false"); });
@@ -1379,6 +1429,9 @@
     ps.disabled = tripped;
     ps.textContent = tripped ? "Locked by discipline guard" : "Save plan";
     ps.style.opacity = tripped ? 0.5 : 1;
+    $("st-guard").innerHTML = tripped ? '<i class="dot bad"></i>Guard: STOP for today'
+      : nearMiss ? '<i class="dot warn"></i>Guard: one loss from stop'
+      : '<i class="dot ok"></i>Guard: clear';
   }
 
   // ---------- roadmap ----------
@@ -1415,6 +1468,10 @@
         '<div class="line"><span>Win rate</span><span>' + Math.round(wr * 100) + "%</span></div>" +
         '<div class="line"><span>Verdict</span><span>' + (gate ? "GATE OPEN — an evaluation is a reasonable bet" : !s3 ? "Need " + (30 - n) + " more demo trades" : exp <= 0 ? "Negative expectancy — refine before paying" : "Finish steps 1–2 first") + "</span></div>";
     }
+    $("st-gate").innerHTML = gate ? '<i class="dot ok"></i>Gate: OPEN'
+      : !s3 ? '<i class="dot neutral"></i>Gate: ' + n + "/30 demo trades"
+      : exp <= 0 ? '<i class="dot warn"></i>Gate: not yet'
+      : '<i class="dot neutral"></i>Gate: finish steps 1–2';
   }
 
   // ---------- consistency rule ----------
@@ -1619,9 +1676,10 @@
       { name: "NY killzone", tz: "America/New_York", start: 8.5, end: 11.5 }
     ];
     function dur(m) { m = Math.max(0, Math.round(m)); return (m >= 60 ? Math.floor(m / 60) + "h " : "") + (m % 60) + "m"; }
-    var nextEl = $("mc-next");
+    var nextEl = $("mc-next"), stKz = $("st-kz");
     if (weekend) {
       nextEl.textContent = "Weekend — markets reopen Monday ~05:00 PHT.";
+      stKz.textContent = "Weekend — markets closed";
     } else {
       var activeKz = null, best = null;
       kzs.forEach(function (k) {
@@ -1634,17 +1692,21 @@
       });
       if (activeKz) {
         nextEl.textContent = "⏱ " + activeKz.k.name + " is OPEN now — " + dur(activeKz.left) + " left.";
+        stKz.innerHTML = '<i class="dot ok"></i>' + activeKz.k.name + " open · " + dur(activeKz.left) + " left";
       } else if (best) {
         var target = new Date(now.getTime() + best.mins * 60000);
         var wd = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", weekday: "short" }).format(target);
         if (wd === "Sat" || wd === "Sun") {
           nextEl.textContent = "Done for the week — " + best.k.name + " returns Monday.";
+          stKz.textContent = "Killzones done for the week";
         } else {
           var kdiff = 8 - tzOffsetHours(best.k.tz, now);
           nextEl.textContent = "⏱ Next window: " + best.k.name + " in " + dur(best.mins) + " (opens " + fmtClock(best.k.start + kdiff) + " PHT).";
+          stKz.innerHTML = '<i class="dot neutral"></i>' + best.k.name + " in " + dur(best.mins);
         }
       }
     }
+    $("st-time").textContent = new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", hour: "2-digit", minute: "2-digit", hour12: false }).format(now) + " PHT";
   }
   mcRender();
   setInterval(mcRender, 30000);
