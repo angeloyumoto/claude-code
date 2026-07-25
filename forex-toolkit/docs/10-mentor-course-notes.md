@@ -205,5 +205,50 @@ into **after** your journal proves the base edge. Where they disagree
 (session times, bias), pick one convention per 30-trade test — never mix
 mid-test.
 
+---
+
+## Appendix — Daily pre-trade routine in Philippine time (print this)
+
+Built into the app's Planner tab as a daily checklist. Your schedule:
+
+| PHT | What happens |
+|---|---|
+| **21:00** | Start pre-market analysis (30 min, his rule) |
+| **21:30** | New York open — trading begins |
+| **21:30–23:30** | Your prime window (his NY AM focus 09:00–10:30 ET = 21:00–22:30 PHT sits inside it) |
+| **23:30–00:00** | Wind down — late chop isn't worth your sleep |
+| 14:00–17:00 | Afternoon alternative: London killzone, if evenings are busy |
+| 20:30 | NFP / CPI releases · FOMC at 02:00 — check the calendar first |
+
+**1 · Head check**
+1. Slept properly + ran your routine — if not, no trading tonight. Non-negotiable.
+2. ForexFactory red folder checked for your pairs/USD. News day = expansion
+   (fine, size properly); quiet day = likely chop, risk less. Never *in* a
+   trade going into a red release; check the firm's news rule.
+
+**2 · Mark the levels (15m chart)**
+3. Previous day's high & low (from the daily chart).
+4. Previous week's high & low.
+5. Vertical session lines at **06:00, 12:00, 18:00 PHT** (= 6 PM, midnight,
+   6 AM New York).
+6. Asia block (06:00–12:00 PHT) high & low.
+7. London block (12:00–18:00 PHT) high & low.
+8. Grey out anything already tapped — only untouched levels are draws.
+
+**3 · Higher-timeframe read**
+9. 4H: mark FVGs, swing points, inflection points; classify recent legs —
+   displacement (continuation) or manipulation (reversal)?
+10. 1H: swings and gaps. Obvious levels only; a clean chart is a decision aid.
+
+**4 · Scenarios & risk (no bias)**
+11. Write if-then scenarios: "reject A → toward B; flip A → toward C."
+12. Update the Funded Tracker; know today's max risk; guard armed
+    (2 losses or 1 banked win = done).
+
+**From 21:30:** watch the 15m for a tap of a marked level → drop to the 1m →
+demand the mini-sweep against the move plus CSD or iFVG → enter on the close,
+stop past the wick/bodies, target the next untapped level. Journal it, grade
+it, close the platform.
+
 *Educational notes on third-party material; not financial advice, and no
 affiliation with or endorsement of the course's paid programs.*

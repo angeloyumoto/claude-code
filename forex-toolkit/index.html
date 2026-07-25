@@ -561,7 +561,40 @@
 <section id="sec-planner" role="tabpanel" hidden>
   <div class="section-head">
     <h2>Trade planner</h2>
-    <p>Plan the trade before the trade. Fill this in, pass the checklist, and only then look for the entry. Plans save in your browser and can be copied out as text.</p>
+    <p>Plan the trade before the trade. Run the pre-market routine first, then build individual trade plans below. Everything saves in your browser.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <h3>Pre-market routine — start 21:00 PHT</h3>
+      <span class="pill neutral" id="pt-pill">0 / 12</span>
+    </div>
+    <p class="sub">Your mentor's 30-minutes-before-the-open process, on Philippine time: analyze at <b>21:00 PHT</b>, trade from the New York open at <b>21:30 PHT</b> (best window ≈ 21:30–23:30 PHT). Afternoon alternative if evenings are busy: the London killzone, 14:00–17:00 PHT. The checklist resets each day.</p>
+
+    <div class="muted-note" style="margin-bottom:6px;font-weight:600">1 · Head check</div>
+    <label class="check"><input type="checkbox" data-pt="0"><div><b>Slept properly and ran my routine</b><p>His rule verbatim: bad sleep or no routine → no trading tonight. The market reopens tomorrow.</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="1"><div><b>Red-folder news checked (ForexFactory)</b><p>Note release times in PHT — NFP/CPI land 20:30 PHT, FOMC 02:00 PHT. News day = expansion, good if sized right; quiet day = likely chop, risk less. Never sit in a trade into a red release, and check your firm's news rule.</p></div></label>
+
+    <div class="muted-note" style="margin:10px 0 6px;font-weight:600">2 · Mark the levels (15-minute chart)</div>
+    <label class="check"><input type="checkbox" data-pt="2"><div><b>Previous day's high &amp; low marked</b><p>From the daily chart — label them PDH / PDL.</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="3"><div><b>Previous week's high &amp; low marked</b><p>PWH / PWL — the bigger magnets.</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="4"><div><b>Session lines drawn at 06:00, 12:00 and 18:00 PHT</b><p>= 6 PM, midnight and 6 AM New York — this frames the mentor's Asia block (06:00–12:00 PHT) and London block (12:00–18:00 PHT).</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="5"><div><b>Asia block high &amp; low marked</b><p>The 06:00–12:00 PHT range extremes.</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="6"><div><b>London block high &amp; low marked</b><p>The 12:00–18:00 PHT range extremes. Mark these after 21:00 PHT so the block is complete.</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="7"><div><b>Already-tapped levels greyed out</b><p>Only untouched levels count — they're the remaining draws on liquidity, your entries AND your targets.</p></div></label>
+
+    <div class="muted-note" style="margin:10px 0 6px;font-weight:600">3 · Higher-timeframe read (4H, then 1H)</div>
+    <label class="check"><input type="checkbox" data-pt="8"><div><b>4H analyzed: FVGs, swing points, inflection points</b><p>Which recent legs displaced (continuation) and which manipulated (reversal)? Note any big 4H fair value gap price could reach into, and the inflection point inside it.</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="9"><div><b>1H swings &amp; gaps marked</b><p>The last of the mentor's level list. Keep the chart clean — obvious levels only.</p></div></label>
+
+    <div class="muted-note" style="margin:10px 0 6px;font-weight:600">4 · Scenarios &amp; risk (no bias!)</div>
+    <label class="check"><input type="checkbox" data-pt="10"><div><b>If-then scenarios written below — not a direction</b><p>"Reject level A → trade toward B. Flip A → trade toward C." React, don't predict.</p></div></label>
+    <label class="check"><input type="checkbox" data-pt="11"><div><b>Funded Tracker updated &amp; risk known</b><p>Today's equity entered, suggested max risk read, guard set (2 losses or 1 banked win = done). From 21:30 PHT: watch 15m for level taps, drop to 1m for the sweep + CSD/iFVG confirmation.</p></div></label>
+
+    <div class="field" style="margin-top:10px">
+      <label for="pt-scen">Tonight's scenarios (saved for today)</label>
+      <textarea id="pt-scen" rows="3" placeholder="e.g. Reject PDH 1.0920 → short toward London low 1.0885. Flip PDH → long toward PWH 1.0950. No aligned setup by 23:30 → done."></textarea>
+    </div>
   </div>
 
   <div class="grid cols-2">
@@ -1502,6 +1535,33 @@
       '<div class="line"><span>Indicative size (confirm in calculator)</span><span>' + fmt(lots, 2) + " lots</span></div>";
   }
   ["pl-pair", "pl-dir", "pl-entry", "pl-sl", "pl-tp", "pl-risk"].forEach(function (id) { $(id).addEventListener("input", plCalc); $(id).addEventListener("change", plCalc); });
+
+  // ---------- pre-market routine (daily reset) ----------
+  (function () {
+    var ptToday = new Date().toISOString().slice(0, 10);
+    if (state.settings.ptDate !== ptToday) {
+      state.settings.ptDate = ptToday;
+      state.settings.ptChecks = "";
+      state.settings.ptScen = "";
+      save();
+    }
+    var boxes = document.querySelectorAll("[data-pt]");
+    var stored = String(state.settings.ptChecks || "");
+    boxes.forEach(function (b) { b.checked = stored[+b.dataset.pt] === "1"; });
+    function ptUpdate() {
+      var bits = "";
+      var n = 0;
+      boxes.forEach(function (b) { bits += b.checked ? "1" : "0"; if (b.checked) n++; });
+      state.settings.ptChecks = bits; save();
+      var pill = $("pt-pill");
+      pill.textContent = n === boxes.length ? "ready — see you at 21:30" : n + " / " + boxes.length;
+      pill.className = "pill " + (n === boxes.length ? "ok" : n >= 8 ? "warn" : "neutral");
+    }
+    boxes.forEach(function (b) { b.addEventListener("change", ptUpdate); });
+    $("pt-scen").value = state.settings.ptScen || "";
+    $("pt-scen").addEventListener("input", function () { state.settings.ptScen = this.value; save(); });
+    ptUpdate();
+  })();
 
   var checkBoxes = document.querySelectorAll("#pl-checks input");
   function plScore() {
