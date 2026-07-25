@@ -98,6 +98,23 @@
   .sheet [data-f]:hover { box-shadow: inset 0 -1px 0 var(--faint); }
   .sheet [data-f]:focus { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--raised); }
   .sheet .acct-pill { cursor: pointer; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr) minmax(76px, .9fr); gap: 4px; min-width: 660px; }
+  .cal .head { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 2px 4px; text-align: center; }
+  .cal .day {
+    border: 1px solid var(--border); border-radius: 8px; min-height: 60px; padding: 5px 7px;
+    font-size: 12px; background: var(--raised); cursor: pointer; line-height: 1.35;
+  }
+  .cal .day:hover { border-color: var(--accent); }
+  .cal .day.blank { background: none; border-color: transparent; cursor: default; }
+  .cal .day.blank:hover { border-color: transparent; }
+  .cal .day.pos { background: var(--good-soft); border-color: rgba(76, 190, 132, .45); }
+  .cal .day.neg { background: var(--bad-soft); border-color: rgba(234, 95, 83, .45); }
+  .cal .day.sel { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .cal .day .d { color: var(--faint); font-size: 11px; }
+  .cal .day b { display: block; font-size: 13.5px; font-family: ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .cal .day .n { color: var(--muted); font-size: 11px; }
+  .cal .wk { border: 1px dashed var(--border); border-radius: 8px; min-height: 60px; padding: 5px 7px; font-size: 11.5px; color: var(--muted); cursor: default; }
+  .cal .wk b { display: block; font-size: 13px; font-family: ui-monospace, Menlo, Consolas, monospace; }
 
   .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .field label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
@@ -613,6 +630,22 @@
     <div class="stat"><span class="lbl">Expectancy</span><b id="j-exp">—</b><span class="note">R per trade</span></div>
     <div class="stat"><span class="lbl">Total</span><b id="j-tot">—</b><span class="note">R, all trades</span></div>
     <div class="stat"><span class="lbl">Net P/L</span><b id="j-pl">—</b><span class="note">$, from risk × R</span></div>
+    <div class="stat"><span class="lbl">Profit factor</span><b id="j-pf">—</b><span class="note">gross win ÷ gross loss</span></div>
+    <div class="stat"><span class="lbl">Day win rate</span><b id="j-dwr">—</b><span class="note">green days</span></div>
+    <div class="stat"><span class="lbl">Streaks</span><b id="j-streak">—</b><span class="note">best wins / worst losses</span></div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3>P/L calendar</h3>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="ghost" id="cal-prev" aria-label="Previous month">‹</button>
+        <b id="cal-label" style="min-width:130px;text-align:center">—</b>
+        <button class="ghost" id="cal-next" aria-label="Next month">›</button>
+      </div>
+    </div>
+    <p class="sub">Every day at a glance — net R and trade count, green day or red day. Weekly totals on the right. Click a day to see just its trades in the table below; click again to clear.</p>
+    <div class="table-wrap"><div class="cal" id="cal-grid"></div></div>
   </div>
 
   <div class="grid cols-2">
@@ -662,10 +695,12 @@
     <div class="card"><h3>Edge by setup</h3><div class="table-wrap"><table><thead><tr><th>Setup</th><th class="num">N</th><th class="num">Win</th><th class="num">ΣR</th></tr></thead><tbody id="bk-setup"></tbody></table></div></div>
     <div class="card"><h3>Edge by pair</h3><div class="table-wrap"><table><thead><tr><th>Pair</th><th class="num">N</th><th class="num">Win</th><th class="num">ΣR</th></tr></thead><tbody id="bk-pair"></tbody></table></div></div>
     <div class="card"><h3>Edge by session</h3><div class="table-wrap"><table><thead><tr><th>Session</th><th class="num">N</th><th class="num">Win</th><th class="num">ΣR</th></tr></thead><tbody id="bk-sess"></tbody></table></div></div>
+    <div class="card"><h3>Edge by weekday</h3><div class="table-wrap"><table><thead><tr><th>Day</th><th class="num">N</th><th class="num">Win</th><th class="num">ΣR</th></tr></thead><tbody id="bk-dow"></tbody></table></div></div>
   </div>
 
   <div class="card" style="margin-top:16px">
     <h3>All trades</h3>
+    <div id="j-dayfilter" style="margin-bottom:6px"></div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Date</th><th>Pair</th><th>Dir</th><th>Acct</th><th>Session</th><th>Setup</th><th class="num">R</th><th>Notes</th><th></th></tr></thead>
@@ -1547,13 +1582,66 @@
   $("j-date").value = todayISO;
 
   var jFilter = "all";
+  var jDay = null;
   document.querySelectorAll("#j-filter [data-jf]").forEach(function (b) {
     b.addEventListener("click", function () {
       jFilter = b.dataset.jf;
+      jDay = null;
       document.querySelectorAll("#j-filter [data-jf]").forEach(function (o) { o.setAttribute("aria-selected", o === b ? "true" : "false"); });
       renderJournal();
     });
   });
+
+  // ---------- P/L calendar (TradeZella-style) ----------
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var calNow = new Date();
+  var calY = calNow.getFullYear(), calM = calNow.getMonth();
+  $("cal-prev").addEventListener("click", function () { calM--; if (calM < 0) { calM = 11; calY--; } renderJournal(); });
+  $("cal-next").addEventListener("click", function () { calM++; if (calM > 11) { calM = 0; calY++; } renderJournal(); });
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function renderCalendar(ts) {
+    $("cal-label").textContent = MONTHS[calM] + " " + calY;
+    var by = {};
+    ts.forEach(function (x) {
+      var d = by[x.date] = by[x.date] || { r: 0, n: 0 };
+      d.r += x.r; d.n++;
+    });
+    var startDow = new Date(Date.UTC(calY, calM, 1)).getUTCDay();
+    var daysIn = new Date(Date.UTC(calY, calM + 1, 0)).getUTCDate();
+    var html = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(function (h) { return '<div class="head">' + h + "</div>"; }).join("") + '<div class="head">Week</div>';
+    var cells = [];
+    for (var i = 0; i < startDow; i++) cells.push(null);
+    for (var d = 1; d <= daysIn; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+    var monthR = 0, monthN = 0, greenD = 0, redD = 0;
+    for (var row = 0; row < cells.length / 7; row++) {
+      var wkR = 0, wkN = 0;
+      for (var col = 0; col < 7; col++) {
+        var day = cells[row * 7 + col];
+        if (day == null) { html += '<div class="day blank"></div>'; continue; }
+        var iso = calY + "-" + pad2(calM + 1) + "-" + pad2(day);
+        var e = by[iso];
+        if (e) {
+          wkR += e.r; wkN += e.n; monthR += e.r; monthN += e.n;
+          if (e.r > 0) greenD++; else if (e.r < 0) redD++;
+          html += '<div class="day ' + (e.r > 0 ? "pos" : e.r < 0 ? "neg" : "") + (jDay === iso ? " sel" : "") + '" data-cal="' + iso + '">' +
+            '<span class="d">' + day + "</span><b class='" + (e.r >= 0 ? "pos" : "neg") + "'>" + (e.r > 0 ? "+" : "") + fmt(e.r, 1) + "R</b>" +
+            '<span class="n">' + e.n + " trade" + (e.n === 1 ? "" : "s") + "</span></div>";
+        } else {
+          html += '<div class="day' + (jDay === iso ? " sel" : "") + '" data-cal="' + iso + '"><span class="d">' + day + "</span></div>";
+        }
+      }
+      html += '<div class="wk">Week ' + (row + 1) + (wkN ? "<b class='" + (wkR >= 0 ? "pos" : "neg") + "'>" + (wkR > 0 ? "+" : "") + fmt(wkR, 1) + "R</b><span class='n'>" + wkN + " trades</span>" : "<b>—</b>") + "</div>";
+    }
+    $("cal-grid").innerHTML = html;
+    $("cal-grid").querySelectorAll("[data-cal]").forEach(function (c) {
+      c.addEventListener("click", function () {
+        jDay = jDay === c.dataset.cal ? null : c.dataset.cal;
+        renderJournal();
+      });
+    });
+    $("cal-label").textContent = MONTHS[calM] + " " + calY + (monthN ? " · " + (monthR > 0 ? "+" : "") + fmt(monthR, 1) + "R · " + greenD + " green / " + redD + " red" : "");
+  }
 
   function resolveSession() {
     var v = $("j-sess").value;
@@ -1649,8 +1737,27 @@
       var plEl = $("j-pl");
       plEl.textContent = usd(plSum, 0);
       plEl.style.color = plSum >= 0 ? "var(--good)" : "var(--bad)";
+      // profit factor
+      var grossW = wins.reduce(function (a, x) { return a + x.r; }, 0);
+      var grossL = Math.abs(losses.reduce(function (a, x) { return a + x.r; }, 0));
+      var pfEl = $("j-pf");
+      pfEl.textContent = grossL > 0 ? fmt(grossW / grossL, 2) : grossW > 0 ? "∞" : "—";
+      pfEl.style.color = grossL === 0 || grossW / grossL >= 1 ? "var(--good)" : "var(--bad)";
+      // day win rate
+      var dayNet = {};
+      t.forEach(function (x) { dayNet[x.date] = (dayNet[x.date] || 0) + x.r; });
+      var dayKeys = Object.keys(dayNet);
+      var greenDays = dayKeys.filter(function (d) { return dayNet[d] > 0; }).length;
+      $("j-dwr").textContent = dayKeys.length ? Math.round(greenDays / dayKeys.length * 100) + "%" : "—";
+      // streaks
+      var cw = 0, cl = 0, mw = 0, ml = 0;
+      t.forEach(function (x) {
+        if (x.r > 0) { cw++; cl = 0; if (cw > mw) mw = cw; }
+        else if (x.r < 0) { cl++; cw = 0; if (cl > ml) ml = cl; }
+      });
+      $("j-streak").textContent = mw + "W / " + ml + "L";
     } else {
-      ["j-wr", "j-aw", "j-al", "j-exp", "j-tot", "j-pl"].forEach(function (id) { $(id).textContent = "—"; $(id).style.color = ""; });
+      ["j-wr", "j-aw", "j-al", "j-exp", "j-tot", "j-pl", "j-pf", "j-dwr", "j-streak"].forEach(function (id) { $(id).textContent = "—"; $(id).style.color = ""; });
     }
     // bars: last 40 trades, height scaled to max |R|
     var recent = t.slice(-40);
@@ -1662,13 +1769,25 @@
         "px;align-self:" + (up ? "flex-end" : "flex-start") + ';margin-' + (up ? 'bottom' : 'top') + ':45px" title="' +
         esc(x.date + " " + x.pair + " " + x.dir + ": " + (x.r > 0 ? "+" : "") + x.r + "R") + '"></div>';
     }).join("") || '<div class="empty">Bars appear as you log trades.</div>';
-    // curve + breakdowns
+    // curve + breakdowns + calendar
     renderCurve(t);
     renderBreakdown(t, "setup", "bk-setup");
     renderBreakdown(t, "pair", "bk-pair");
     renderBreakdown(t, "session", "bk-sess");
-    // table
-    $("j-table").innerHTML = t.slice().reverse().map(function (x) {
+    var DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    renderBreakdown(t.map(function (x) {
+      var dt = new Date(x.date + "T00:00:00Z");
+      return Object.assign({}, x, { dow: isNaN(dt) ? "—" : DOW[dt.getUTCDay()] });
+    }), "dow", "bk-dow");
+    renderCalendar(t);
+    // day-filter chip + table
+    var tableRows = jDay ? t.filter(function (x) { return x.date === jDay; }) : t;
+    $("j-dayfilter").innerHTML = jDay
+      ? '<span class="pill neutral">Showing ' + esc(jDay) + " · " + tableRows.length + ' trade' + (tableRows.length === 1 ? "" : "s") + '</span> <button class="ghost" id="j-dayclear" style="padding:4px 10px;font-size:12px">Show all</button>'
+      : "";
+    var dc = $("j-dayclear");
+    if (dc) dc.addEventListener("click", function () { jDay = null; renderJournal(); });
+    $("j-table").innerHTML = tableRows.slice().reverse().map(function (x) {
       return "<tr><td class='mono'>" + esc(x.date) + "</td><td>" + esc(x.pair) + "</td><td>" + esc(x.dir) +
         "</td><td><span class='pill " + (x.account === "live" ? "neutral" : "ok") + "'>" + esc(x.account || "demo") + "</span></td><td>" + esc(x.session || "—") + "</td><td>" + esc(x.setup || "—") +
         "</td><td class='num " + (x.r > 0 ? "pos" : "neg") + "'>" + (x.r > 0 ? "+" : "") + fmt(x.r, 2) + "</td><td style='max-width:240px'>" + esc(x.notes || "") +
