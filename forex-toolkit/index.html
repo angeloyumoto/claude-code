@@ -257,6 +257,7 @@
           <option>ICT 4-step liquidity sweep</option>
           <option>ICT Silver Bullet</option>
           <option>ICT London Judas swing</option>
+          <option>Mentor's level-to-level (TBL)</option>
         </select>
         <div class="hint">If unsure, take Pullback trend-following — fewest trades, most forgiving.</div>
       </div>
@@ -344,7 +345,9 @@
       <div class="fold-body"><div class="row">
         <div class="field"><label for="dg-maxl">Stop after (consecutive losses)</label><input id="dg-maxl" type="number" value="2" min="1" step="1"></div>
         <div class="field"><label for="dg-maxr">Stop at (net R lost today)</label><input id="dg-maxr" type="number" value="2" min="0.5" step="0.5"></div>
-      </div></div>
+      </div>
+      <label class="check"><input type="checkbox" id="dg-onewin"><div><b>Mentor mode: done after 1 banked win</b><p>The "2 losses OR 1 win = walk away" rule — bank the day's first net-positive result and stop. Good evaluation pacing.</p></div></label>
+      </div>
     </details>
     <div class="stat-row" style="margin-top:8px">
       <div class="stat"><span class="lbl">Trades today</span><b id="dg-n">0</b></div>
@@ -1197,7 +1200,28 @@
         "Trading it on mornings with UK/EU red-folder news.",
         "Entering before the fast move back confirms the trap."
       ],
-      check: ["Asian range marked", "Opening spike through one side, then a stall", "Fast displacement back through the range", "Entry on the gap pullback", "Stop past the fake-out wick"] }
+      check: ["Asian range marked", "Opening spike through one side, then a stall", "Fast displacement back through the range", "Entry on the gap pullback", "Stop past the fake-out wick"] },
+
+    { id: "tbl", name: "Mentor's level-to-level (TBL) model", level: "Advanced", levelSt: "bad",
+      time: "Prep 21:00, trade from 21:30 PHT (NY open)", pairs: "Indices (NQ/ES) or majors",
+      what: "The system from your mentor's course. No daily bias at all: you mark time-based liquidity levels before the New York open, write if-then scenarios, and trade level to level based on how price *reacts* — manipulation (no follow-through) means reversal, displacement (fast push leaving gaps) means continuation. Its signature move is the flip: when a level fails, that failure names your next trade instead of ending your day. Full notes in docs/10-mentor-course-notes.md.",
+      need: "15m chart for levels, 1m for entries; free evenings from ~21:00 PHT; the Smart Money guide tab as background. His sessions are marked in New York time and differ from the UK sessions used elsewhere in this app.",
+      steps: [
+        "Prep (~21:00 PHT): mark previous day + week highs/lows, and his session blocks — Asia 06:00–12:00 PHT, London block 12:00–18:00 PHT — then their highs/lows. Keep only levels price hasn't tapped yet. Check red-folder news: news days = expansion (good, size sensibly); quiet days = chop, risk less. Never sit in a trade through a red release.",
+        "Write scenarios, not a bias: \"reject level A → trade toward B; flip A → trade toward C.\" You react to what price does at levels; you never predict which one hits first.",
+        "Wait for 21:30 PHT. Setups that print before the open don't count — skipping them raises the win rate.",
+        "At a level, drop to the 1m and demand two things: a small run on structure against the move (a mini-sweep, bonus into a gap), then confirmation — an inverted fair value gap, or a change in the state of delivery (an opposite-color candle BODY engulfing the previous body; turn wicks off to see it).",
+        "Enter on the confirmation close. Stop beyond the candle bodies for scalps between levels, beyond the swing for reversals at a level. Target the next untapped level, 1.5R minimum. Trail your stop behind every stop-run; at the target, don't auto-exit — keep trailing 1m swings (\"price-waiting\") and let expansion days pay 5R+.",
+        "The flip: if a level confirms, you enter, and the opposite signal prints immediately — cut instantly and trade toward the next level. Risk rules: ~1% base, 0.5% in drawdown, more only when well in profit; 2 losses OR 1 banked win = done for the day (togglable in the Discipline Guard)."
+      ],
+      ex: "21:32 PHT: price trades down into the London-block low you marked at 12:00–18:00 PHT. On the 1m it sweeps a minor low, then an up-close body engulfs the last down body (CSD) — you buy on that close, stop under the swing, targeting the Asia high. It runs +1R, then sellers print a bearish CSD right at your entry zone — you cut for ~0, flip short toward the previous day's low, and that trade pays 2.5R. One small scratch, one banked win, done for the day.",
+      avoid: [
+        "Trading confirmations that formed before 21:30 PHT.",
+        "Coming in with a directional bias — his own journal data showed a ~15-point win-rate drop when he traded his bias.",
+        "Refusing the flip after a loss. The failed level is the information; sulking is the leak.",
+        "Mixing his NY-time session marks with this app's UK-session marks in the same test — pick one convention per 30 trades."
+      ],
+      check: ["Levels + scenarios written before 21:30 PHT", "Red-folder news checked", "Mini-sweep against the move on the 1m", "CSD or iFVG confirmation at the level", "Target = next untapped level, ≥1.5R", "2 losses or 1 win → platform closed"] }
   ];
 
   var tutSel = $("tut-sel");
@@ -1795,6 +1819,10 @@
   $("dg-news").addEventListener("change", function () {
     state.settings.dgNewsDate = this.checked ? todayISO : ""; save(); renderBreaker();
   });
+  $("dg-onewin").checked = state.settings.dgOneWin === "1";
+  $("dg-onewin").addEventListener("change", function () {
+    state.settings.dgOneWin = this.checked ? "1" : ""; save(); renderBreaker();
+  });
   function renderBreaker() {
     var todays = state.trades.filter(function (t) { return t.date === todayISO; });
     var net = todays.reduce(function (a, t) { return a + t.r; }, 0);
@@ -1802,28 +1830,33 @@
     for (var i = todays.length - 1; i >= 0; i--) { if (todays[i].r <= 0) streak++; else break; }
     var maxL = num($("dg-maxl")) || 2, maxR = num($("dg-maxr")) || 2;
     var tripped = streak >= maxL || net <= -maxR;
+    var winBanked = state.settings.dgOneWin === "1" && !tripped && todays.some(function (t) { return t.r > 0; }) && net > 0;
     $("dg-n").textContent = todays.length;
     var netEl = $("dg-net");
     netEl.textContent = (net >= 0 ? "+" : "") + fmt(net, 1);
     netEl.style.color = todays.length ? (net >= 0 ? "var(--good)" : "var(--bad)") : "";
     $("dg-streak").textContent = streak;
     var pill = $("dg-pill");
-    var nearMiss = !tripped && streak > 0 && streak >= maxL - 1;
-    pill.className = "pill " + (tripped ? "bad" : nearMiss ? "warn" : "ok");
-    pill.textContent = tripped ? "TRIPPED — stop" : nearMiss ? "one loss from stop" : "clear";
+    var nearMiss = !tripped && !winBanked && streak > 0 && streak >= maxL - 1;
+    pill.className = "pill " + (tripped ? "bad" : winBanked ? "ok" : nearMiss ? "warn" : "ok");
+    pill.textContent = tripped ? "TRIPPED — stop" : winBanked ? "win banked — done" : nearMiss ? "one loss from stop" : "clear";
     var newsOk = state.settings.dgNewsDate === todayISO;
     var b = $("dg-banner");
     if (tripped) {
       b.innerHTML = '<div class="prose"><div class="callout red" style="margin:10px 0 0"><b>Circuit breaker tripped.</b> ' +
         streak + " consecutive losses / " + (net >= 0 ? "+" : "") + fmt(net, 1) + "R today. Close the platform — the next good setup is tomorrow. The Trade Planner is locked until then.</div></div>";
+    } else if (winBanked) {
+      b.innerHTML = '<div class="prose"><div class="callout" style="margin:10px 0 0"><b>Win banked (+' + fmt(net, 1) + "R).</b> Mentor mode: the day's job is done — close the platform and keep it. The Trade Planner is locked until tomorrow.</div></div>";
     } else if (!newsOk) {
       b.innerHTML = '<div class="hint" style="margin-top:8px;color:var(--warn)">News not checked yet today — do it before the first trade.</div>';
     } else { b.innerHTML = ""; }
+    var locked = tripped || winBanked;
     var ps = $("pl-save");
-    ps.disabled = tripped;
-    ps.textContent = tripped ? "Locked by discipline guard" : "Save plan";
-    ps.style.opacity = tripped ? 0.5 : 1;
+    ps.disabled = locked;
+    ps.textContent = tripped ? "Locked by discipline guard" : winBanked ? "Done for today — win banked" : "Save plan";
+    ps.style.opacity = locked ? 0.5 : 1;
     $("st-guard").innerHTML = tripped ? '<i class="dot bad"></i>Guard: STOP for today'
+      : winBanked ? '<i class="dot ok"></i>Guard: win banked — done'
       : nearMiss ? '<i class="dot warn"></i>Guard: one loss from stop'
       : '<i class="dot ok"></i>Guard: clear';
   }
@@ -1837,7 +1870,8 @@
     "Pullback trend-following (recommended first)": "pullback", "London breakout": "breakout",
     "Range trading at extremes": "range", "Higher-timeframe swing": "swing", "Break and retest": "retest",
     "MA crossover baseline (mechanical)": "ma", "ICT 4-step liquidity sweep": "ict4",
-    "ICT Silver Bullet": "silver", "ICT London Judas swing": "judas"
+    "ICT Silver Bullet": "silver", "ICT London Judas swing": "judas",
+    "Mentor's level-to-level (TBL)": "tbl"
   };
   $("rm-tut").addEventListener("click", function () {
     var id = RM_TUT_MAP[state.settings.rmStrat] || "pullback";

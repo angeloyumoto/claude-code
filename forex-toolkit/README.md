@@ -17,7 +17,8 @@ evaluation programs.
 | `docs/06-advanced-strategies.md` | Five more strategies: break &amp; retest, liquidity sweeps, fib confluence, divergence, mechanical crossover. |
 | `docs/07-glossary.md` | Full A–Z of forex, technical-analysis, prop-firm and ICT terms. |
 | `docs/08-smart-money-concepts.md` | The ICT / Smart Money playbook prop traders favor: the 4-step liquidity-sweep model, Silver Bullet, London Judas swing, Power of Three. |
-| `docs/09-strategy-tutorials.md` | Plain-English tutorial for each of the nine strategies: steps, worked examples with real numbers, mistakes, checklists — also built into the app. |
+| `docs/09-strategy-tutorials.md` | Plain-English tutorial for each strategy: steps, worked examples with real numbers, mistakes, checklists — also built into the app. |
+| `docs/10-mentor-course-notes.md` | Distilled mentor ICT course: manipulation vs displacement, IRL→ERL, time-based liquidity levels (with PHT times), no-bias scenarios, CSD/iFVG/SFP confirmations, flip logic, price-waiting, and his risk model. |
 
 ## The app (`index.html`)
 

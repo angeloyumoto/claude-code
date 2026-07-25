@@ -182,6 +182,33 @@ Terms specific to the SMC/ICT school (see `08-smart-money-concepts.md`):
   level, the other doesn't) — evidence a move is manipulation, not strength.
 - **Equal highs / equal lows (EQH/EQL)** — two-plus touches at one price;
   the most obvious liquidity pools on any chart.
+- **Manipulation vs Displacement (MvD)** — the mentor-course core lens:
+  a leg that pokes beyond structure without follow-through (manipulation →
+  reversal) vs a rapid push through it leaving FVGs (displacement →
+  continuation).
+- **CSD (change in the state of delivery)** — candle *bodies* flipping
+  sides: an opposite-color body engulfing the previous body at a level.
+  A precise early entry trigger (view with wicks hidden).
+- **BSG (break-in-structure gap)** — an FVG created while breaking
+  structure; the highest-probability gap type. An inverted BSG targets the
+  opposing swing.
+- **Inflection point (IP)** — the broken structure level extended into an
+  FVG; where trapped traders' breakeven stops cluster — a refined
+  reaction point inside the gap.
+- **SFP (swing failure pattern)** — a candle takes a high/low but can't
+  close beyond it; the earliest reversal hint.
+- **Unicorn** — a breaker block overlapping an FVG after a liquidity
+  sweep; a high-grade entry zone.
+- **Time-based liquidity (TBL)** — highs/lows of defined time windows
+  (previous day/week, session blocks, opening prices); used as the
+  mechanical filter for which levels matter.
+- **Flip** — when a level confirms one way then immediately fails: exit
+  fast and trade toward the next level instead of ending the session.
+- **Price-waiting** — at the target level, trailing stops behind entry-
+  timeframe swings instead of taking fixed profit, to capture expansion
+  days.
+- **AMDX / XAMD** — accumulation–manipulation–distribution cycles applied
+  to any defined time range (the week, the day, a session).
 
 ## Fundamentals & news
 
