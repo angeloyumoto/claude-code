@@ -1360,7 +1360,7 @@
     "EURJPY": { kind: "jpyCross", rateLabel: "Current USDJPY rate" },
     "GBPJPY": { kind: "jpyCross", rateLabel: "Current USDJPY rate" },
     "EURGBP": { kind: "gbpQuote", rateLabel: "Current GBPUSD rate" },
-    "XAUUSD (gold)": { kind: "custom" },
+    "XAUUSD (gold)": { kind: "fixedpt", val: 100, unit: "point", cfd: true },
     "Other / custom": { kind: "custom" }
   };
   function isPoints(pair) { return (PAIRS[pair] || {}).unit === "point"; }
@@ -1475,7 +1475,7 @@
     var riskAmt = bal * riskPct;
     var lots = stop > 0 && pv > 0 ? riskAmt / (stop * pv) : 0;
     var pt = isPoints(pair);
-    var isFut = (PAIRS[pair] || {}).kind === "fixedpt";
+    var isFut = (PAIRS[pair] || {}).kind === "fixedpt" && !(PAIRS[pair] || {}).cfd;
     $("ps-out").innerHTML =
       '<div class="lbl" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Position size</div>' +
       '<div class="big">' + fmt(lots, 2) + (isFut ? " contracts" : " lots") + "</div>" +
