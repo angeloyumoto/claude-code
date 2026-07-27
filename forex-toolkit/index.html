@@ -275,6 +275,7 @@
           <option>ICT Silver Bullet</option>
           <option>ICT London Judas swing</option>
           <option>Mentor's level-to-level (TBL)</option>
+          <option>G2S Continuation Model</option>
         </select>
         <div class="hint">If unsure, take Pullback trend-following — fewest trades, most forgiving.</div>
       </div>
@@ -618,15 +619,15 @@
       <div class="result" id="pl-out"></div>
 
       <h3 style="margin:16px 0 4px">Pre-trade checklist</h3>
-      <p class="sub">If you can't tick at least five, skip the trade — the next one is free.</p>
-      <div id="pl-checks">
-        <label class="check"><input type="checkbox"><div><b>Aligned with the higher-timeframe trend or clear range</b><p>You know what the daily / H4 chart is doing and you're not fighting it.</p></div></label>
-        <label class="check"><input type="checkbox"><div><b>Entry is at a level, not in the middle of nowhere</b><p>Support/resistance, prior structure, or a measured pullback — not FOMO.</p></div></label>
-        <label class="check"><input type="checkbox"><div><b>Reward is at least 1.5× the risk</b><p>Stop and target are set by structure, and the math still clears 1.5R.</p></div></label>
-        <label class="check"><input type="checkbox"><div><b>News checked</b><p>No high-impact release (NFP, CPI, rate decision) inside your holding window.</p></div></label>
-        <label class="check"><input type="checkbox"><div><b>Risk fits today's buffer</b><p>This trade's dollar risk is within the suggested max on the Funded Tracker.</p></div></label>
-        <label class="check"><input type="checkbox"><div><b>You'd take this trade 100 times</b><p>It matches your written strategy — it's not revenge, boredom, or a hunch.</p></div></label>
+      <div class="field" style="max-width:320px;margin-top:8px">
+        <label for="pl-ckt">Checklist template</label>
+        <select id="pl-ckt">
+          <option value="generic">General (any strategy)</option>
+          <option value="g2s">G2S Continuation Model</option>
+        </select>
       </div>
+      <p class="sub" id="pl-ckhint"></p>
+      <div id="pl-checks"></div>
       <div style="display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap">
         <span class="pill neutral" id="pl-score">0 / 6</span>
         <button class="action" id="pl-save">Save plan</button>
@@ -1289,7 +1290,28 @@
         "Refusing the flip after a loss. The failed level is the information; sulking is the leak.",
         "Mixing his NY-time session marks with this app's UK-session marks in the same test — pick one convention per 30 trades."
       ],
-      check: ["Levels + scenarios written before 21:30 PHT", "Red-folder news checked", "Mini-sweep against the move on the 1m", "CSD or iFVG confirmation at the level", "Target = next untapped level, ≥1.5R", "2 losses or 1 win → platform closed"] }
+      check: ["Levels + scenarios written before 21:30 PHT", "Red-folder news checked", "Mini-sweep against the move on the 1m", "CSD or iFVG confirmation at the level", "Target = next untapped level, ≥1.5R", "2 losses or 1 win → platform closed"] },
+
+    { id: "g2s", name: "G2S Continuation Model", level: "Intermediate+", levelSt: "warn",
+      time: "Killzones: 21:30–23:30 PHT (NY) or 14:00–17:00 PHT (London)", pairs: "Majors or indices (NQ/ES)",
+      what: "A with-trend sweep model: instead of fading a stop hunt for a reversal, you use it as fuel to rejoin the existing trend. A sweep clears out weak hands, smart money displaces price back in the trending direction leaving a fresh gap, and you enter on the retrace into that gap. Six gated steps — if any stage fails, you WAIT or REASSESS, never chase. Full write-up in docs/11-g2s-continuation-model.md; the exact checklist is loaded in the Trade Planner (template: G2S Continuation).",
+      need: "Your pre-market level map (PDH/PDL, Asia & London highs/lows) already drawn; a fib tool for the 0.50–0.705 retrace and 1.272/1.618 extensions; the correlated pair on a second chart for the SMT check.",
+      steps: [
+        "Step 1 — Liquidity sweep: price takes out a recent high/low from your map (Asia H/L, London H/L, PDH/PDL, any HTF pool). You want a stop hunt — a poke through — not a clean breakout that keeps going.",
+        "Steps 2–3 (optional confluence): did the sweep land inside or near a 1H/4H fair value gap that price is rejecting? Is there SMT divergence (your pair swept the level but its correlated twin didn't)? Neither is required — each is a confidence booster.",
+        "Step 4 — Displacement WITH the trend: after the sweep, price must displace back toward its trending direction — huge candle bodies, clear imbalance, a fresh FVG. If the sweep changed the trend instead, this model does not apply (that's a reversal setup — different playbook).",
+        "Step 5 — Confirmed FVG entry: wait for the retrace into that fresh gap — ideally the 0.50–0.705 fib zone of the displacement leg — and for a candle to close outside it, respecting the gap. That gap is your entry area. No respect = no trade.",
+        "Step 6 — Targets and stop: minimum 1R or skip. Stop below/above the order block, the FVG, or the rejection wick — 1–2 structure legs behind entry. Mark TPs in advance: partial at the first internal liquidity, final at the 1.0/1.272/1.618 extension or external liquidity (equal highs/lows, the swing).",
+        "Manage: move the stop to breakeven after +1R OR when price tags the first liquidity zone. One setup per session unless a second clean A+ appears. Log it with setup tag 'g2s'."
+      ],
+      ex: "EURUSD trending up all session. At 21:40 PHT it dips and sweeps the Asia low at 1.0842 (which sits inside a 1H FVG — bonus), while GBPUSD holds above its own low (SMT — bonus). Two candles later a strong bullish displacement closes at 1.0861, leaving a gap at 1.0850–1.0846. Price retraces into the gap (the 0.62 fib of the leg) and a candle closes back above it. Buy 1.0851, stop 1.0839 under the sweep wick (12 pips), partial at the London high 1.0872 (+1.75R, stop to breakeven), final at the 1.272 extension 1.0884 (+2.75R).",
+      avoid: [
+        "Trading it when the sweep actually reversed the trend — Step 4 is the gate: no with-trend displacement, no trade.",
+        "Entering the moment the gap forms instead of waiting for the retrace AND the respecting close.",
+        "Taking sub-1R setups because the checklist 'mostly' passed — a failed stage means wait, not shrink the target.",
+        "A second, third, fourth setup in the same session. One per session is part of the model."
+      ],
+      check: ["Sweep of a mapped pool (stop hunt, not breakout)", "Trend unchanged + displacement candle with fresh FVG", "Retrace into the gap (0.50–0.705) with a respecting close", "≥1R to a pre-marked liquidity target", "SL behind OB/FVG/wick, 1–2 legs back", "BE plan set: +1R or first liquidity zone"] }
   ];
 
   var tutSel = $("tut-sel");
@@ -1563,15 +1585,60 @@
     ptUpdate();
   })();
 
-  var checkBoxes = document.querySelectorAll("#pl-checks input");
+  var CK_TEMPLATES = {
+    generic: {
+      hint: "If you can't tick at least five, skip the trade — the next one is free.",
+      items: [
+        { t: "Aligned with the higher-timeframe trend or clear range", d: "You know what the daily / H4 chart is doing and you're not fighting it." },
+        { t: "Entry is at a level, not in the middle of nowhere", d: "Support/resistance, prior structure, or a measured pullback — not FOMO." },
+        { t: "Reward is at least 1.5× the risk", d: "Stop and target are set by structure, and the math still clears 1.5R." },
+        { t: "News checked", d: "No high-impact release (NFP, CPI, rate decision) inside your holding window." },
+        { t: "Risk fits today's buffer", d: "This trade's dollar risk is within the suggested max on the Funded Tracker." },
+        { t: "You'd take this trade 100 times", d: "It matches your written strategy — it's not revenge, boredom, or a hunch." }
+      ]
+    },
+    g2s: {
+      hint: "The G2S flow: required steps gate the trade — if any stage fails, WAIT or REASSESS. Optional steps are confluence only. One setup per session.",
+      items: [
+        { t: "Step 1 — Liquidity sweep of a mapped pool", d: "Price took out a recent high/low: Asia H/L, London H/L, PDH/PDL, or any HTF BSL/SSL. You're looking at a stop hunt, not a clean breakout." },
+        { t: "Step 2 — Sweep inside / near a HTF fair value gap (optional)", d: "The sweep happened in or near a 1H/4H FVG and price is rejecting the zone. Adds confluence — not required.", opt: true },
+        { t: "Step 3 — SMT divergence (optional)", d: "The correlated pair (ES vs NQ; EURUSD vs GBPUSD or inverted DXY) disagreed at the level — one made the high/low, the other didn't. Confidence booster, not a dealbreaker.", opt: true },
+        { t: "Step 4 — Displacement candle in the trending direction", d: "Huge candle bodies with clear imbalance creating a fresh FVG, pushing back WITH the trend. Still bullish? Still bearish? If the sweep changed the trend, this model doesn't apply." },
+        { t: "Step 5 — FVG respected: entry confirmed", d: "Price retraced into the fresh gap (ideally the 0.50–0.705 fib of the displacement leg) and a candle closed outside, respecting it. That gap is your entry area." },
+        { t: "Step 6 — Targets & stop set, ≥1R minimum", d: "TPs pre-marked at liquidity: partial at internal (first FVG/minor swing), final at 1.0/1.272/1.618 extensions or EQH/EQL. SL behind the OB/FVG/rejection wick, 1–2 structure legs back. Breakeven after +1R or the first liquidity zone." }
+      ]
+    }
+  };
+  function renderChecks() {
+    var tpl = CK_TEMPLATES[$("pl-ckt").value] || CK_TEMPLATES.generic;
+    $("pl-ckhint").textContent = tpl.hint;
+    $("pl-checks").innerHTML = tpl.items.map(function (it, i) {
+      return '<label class="check"><input type="checkbox" data-ck="' + i + '"' + (it.opt ? ' data-opt="1"' : "") + '><div><b>' + it.t + "</b><p>" + it.d + "</p></div></label>";
+    }).join("");
+    $("pl-checks").querySelectorAll("input").forEach(function (c) { c.addEventListener("change", plScore); });
+    plScore();
+  }
   function plScore() {
-    var n = 0; checkBoxes.forEach(function (c) { if (c.checked) n++; });
+    var boxes = $("pl-checks").querySelectorAll("input");
+    var n = 0, req = 0, reqDone = 0, bonus = 0;
+    boxes.forEach(function (c) {
+      if (c.checked) n++;
+      if (c.dataset.opt) { if (c.checked) bonus++; }
+      else { req++; if (c.checked) reqDone++; }
+    });
     var pill = $("pl-score");
-    pill.textContent = n + " / 6";
-    pill.className = "pill " + (n >= 5 ? "ok" : n >= 3 ? "warn" : "bad");
+    if ($("pl-ckt").value === "g2s") {
+      pill.textContent = "required " + reqDone + "/" + req + (bonus ? " · +" + bonus + " confluence" : "");
+      pill.className = "pill " + (reqDone === req ? "ok" : reqDone >= req - 1 ? "warn" : "bad");
+    } else {
+      pill.textContent = n + " / " + boxes.length;
+      pill.className = "pill " + (n >= 5 ? "ok" : n >= 3 ? "warn" : "bad");
+    }
     return n;
   }
-  checkBoxes.forEach(function (c) { c.addEventListener("change", plScore); });
+  if (state.settings.plCkt) $("pl-ckt").value = state.settings.plCkt;
+  $("pl-ckt").addEventListener("change", function () { state.settings.plCkt = this.value; save(); renderChecks(); });
+  renderChecks();
 
   function planText(p) {
     return "TRADE PLAN — " + p.pair + " " + p.dir + " (" + p.session + ")\n" +
@@ -2050,7 +2117,7 @@
     "Range trading at extremes": "range", "Higher-timeframe swing": "swing", "Break and retest": "retest",
     "MA crossover baseline (mechanical)": "ma", "ICT 4-step liquidity sweep": "ict4",
     "ICT Silver Bullet": "silver", "ICT London Judas swing": "judas",
-    "Mentor's level-to-level (TBL)": "tbl"
+    "Mentor's level-to-level (TBL)": "tbl", "G2S Continuation Model": "g2s"
   };
   $("rm-tut").addEventListener("click", function () {
     var id = RM_TUT_MAP[state.settings.rmStrat] || "pullback";
