@@ -485,11 +485,13 @@
         <div class="field"><label for="ps-risk">Risk per trade (%)</label><input id="ps-risk" type="number" value="0.5" step="0.1" min="0"></div>
       </div>
       <div class="row">
-        <div class="field"><label for="ps-pair">Pair</label><select id="ps-pair" class="pair-select"></select></div>
-        <div class="field"><label for="ps-stop">Stop-loss (pips)</label><input id="ps-stop" type="number" value="20" step="0.5" min="0.1"></div>
+        <div class="field"><label for="ps-pair">Instrument</label><select id="ps-pair" class="pair-select"></select></div>
+        <div class="field"><label for="ps-stop">Stop-loss (pips / points)</label><input id="ps-stop" type="number" value="20" step="0.5" min="0.1"></div>
       </div>
       <div class="field" id="ps-rate-wrap" hidden><label for="ps-rate" id="ps-rate-label">Rate</label><input id="ps-rate" type="number" value="150" step="0.0001"></div>
-      <div class="field" id="ps-custom-wrap" hidden><label for="ps-custom">Pip value per standard lot ($)</label><input id="ps-custom" type="number" value="10" step="0.01"></div>
+      <div class="field" id="ps-custom-wrap" hidden><label for="ps-custom">$ per pip/point per lot</label><input id="ps-custom" type="number" value="10" step="0.01">
+        <div class="hint">US100 CFD point value varies by broker — check your firm's contract specs (often $1 or $10 per point per 1.0 lot).</div>
+      </div>
       <div class="result" id="ps-out"></div>
     </div>
 
@@ -1337,6 +1339,10 @@
 
   // ---------- pairs & pip math (USD account) ----------
   var PAIRS = {
+    "NQ (Nasdaq 100)": { kind: "fixedpt", val: 20, unit: "point" },
+    "MNQ (Micro Nasdaq)": { kind: "fixedpt", val: 2, unit: "point" },
+    "US100 CFD": { kind: "custom", unit: "point" },
+    "ES (S&P 500)": { kind: "fixedpt", val: 50, unit: "point" },
     "EURUSD": { kind: "usdQuote" }, "GBPUSD": { kind: "usdQuote" }, "AUDUSD": { kind: "usdQuote" }, "NZDUSD": { kind: "usdQuote" },
     "USDJPY": { kind: "usdBase", pip: 0.01, rateLabel: "Current USDJPY rate" },
     "USDCAD": { kind: "usdBase", pip: 0.0001, rateLabel: "Current USDCAD rate" },
@@ -1347,10 +1353,12 @@
     "XAUUSD (gold)": { kind: "custom" },
     "Other / custom": { kind: "custom" }
   };
-  function pipSize(pair) { return /JPY/.test(pair) ? 0.01 : 0.0001; }
-  // pip value in USD per standard lot
+  function isPoints(pair) { return (PAIRS[pair] || {}).unit === "point"; }
+  function pipSize(pair) { return isPoints(pair) ? 1 : /JPY/.test(pair) ? 0.01 : 0.0001; }
+  // pip value in USD per standard lot (or $ per point per contract for indices)
   function pipValuePerLot(pair, rate, custom) {
     var p = PAIRS[pair] || PAIRS["Other / custom"];
+    if (p.kind === "fixedpt") return p.val;
     if (p.kind === "usdQuote") return 10;
     if (p.kind === "usdBase") return (p.pip * 100000) / (rate || 1);
     if (p.kind === "jpyCross") return 1000 / (rate || 1);
@@ -1451,17 +1459,22 @@
   // ---------- position size ----------
   var psUpd = wirePairExtras("ps-pair", "ps-rate-wrap", "ps-rate-label", "ps-custom-wrap", psCalc);
   function psCalc() {
+    var pair = $("ps-pair").value;
     var bal = num($("ps-bal")), riskPct = num($("ps-risk")) / 100, stop = num($("ps-stop"));
-    var pv = pipValuePerLot($("ps-pair").value, num($("ps-rate")), num($("ps-custom")));
+    var pv = pipValuePerLot(pair, num($("ps-rate")), num($("ps-custom")));
     var riskAmt = bal * riskPct;
     var lots = stop > 0 && pv > 0 ? riskAmt / (stop * pv) : 0;
+    var pt = isPoints(pair);
     $("ps-out").innerHTML =
       '<div class="lbl" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Position size</div>' +
-      '<div class="big">' + fmt(lots, 2) + " lots</div>" +
+      '<div class="big">' + fmt(lots, 2) + (pt ? " contracts" : " lots") + "</div>" +
       '<div class="line"><span>Dollar risk</span><span>' + usd(riskAmt, 2) + "</span></div>" +
-      '<div class="line"><span>Pip value at this size</span><span>' + usd(lots * pv, 2) + "/pip</span></div>" +
-      '<div class="line"><span>Mini lots / micro lots</span><span>' + fmt(lots * 10, 1) + " / " + fmt(lots * 100, 0) + "</span></div>" +
-      '<div class="line"><span>Units of base currency</span><span>' + fmt(lots * 100000, 0) + "</span></div>";
+      '<div class="line"><span>' + (pt ? "$ per point at this size" : "Pip value at this size") + "</span><span>" + usd(lots * pv, 2) + (pt ? "/pt" : "/pip") + "</span></div>" +
+      (pt
+        ? (pair.indexOf("NQ (") === 0 ? '<div class="line"><span>Micro equivalent (MNQ)</span><span>' + fmt(lots * 10, 1) + " contracts</span></div>" : "") +
+          '<div class="line"><span>Round down to whole contracts</span><span>' + Math.floor(lots) + " (risk " + usd(Math.floor(lots) * stop * pv, 0) + ")</span></div>"
+        : '<div class="line"><span>Mini lots / micro lots</span><span>' + fmt(lots * 10, 1) + " / " + fmt(lots * 100, 0) + "</span></div>" +
+          '<div class="line"><span>Units of base currency</span><span>' + fmt(lots * 100000, 0) + "</span></div>");
   }
   ["ps-bal", "ps-risk", "ps-stop", "ps-rate", "ps-custom"].forEach(function (id) { $(id).addEventListener("input", psCalc); });
   psUpd();
@@ -1477,7 +1490,7 @@
     var be = rr > 0 ? 100 / (1 + rr) : 100;
     $("rr-out").innerHTML =
       '<div class="big">' + fmt(rr, 2) + " R</div>" +
-      '<div class="line"><span>Risk / reward in pips</span><span>' + fmt(riskP, 1) + " / " + fmt(rewP, 1) + "</span></div>" +
+      '<div class="line"><span>Risk / reward in ' + (isPoints(pair) ? "points" : "pips") + "</span><span>" + fmt(riskP, 1) + " / " + fmt(rewP, 1) + "</span></div>" +
       '<div class="line"><span>Breakeven win rate</span><span>' + fmt(be, 1) + "%</span></div>" +
       (sane ? "" : '<div style="color:var(--bad);font-weight:600;margin-top:6px">⚠ Levels don’t match a ' + dir.toLowerCase() + " — check entry/stop/target.</div>") +
       (sane && rr < 1.5 ? '<div style="color:var(--warn);font-weight:600;margin-top:6px">Below 1.5R — consider a better entry or wider target.</div>' : "");
@@ -1488,12 +1501,15 @@
   // ---------- pip value ----------
   var pvUpd = wirePairExtras("pv-pair", "pv-rate-wrap", "pv-rate-label", "pv-custom-wrap", pvCalc);
   function pvCalc() {
+    var pair = $("pv-pair").value;
     var lots = num($("pv-lots"));
-    var pv = pipValuePerLot($("pv-pair").value, num($("pv-rate")), num($("pv-custom")));
+    var pv = pipValuePerLot(pair, num($("pv-rate")), num($("pv-custom")));
+    var pt = isPoints(pair);
     $("pv-out").innerHTML =
-      '<div class="big">' + usd(lots * pv, 2) + " / pip</div>" +
-      '<div class="line"><span>Per standard lot</span><span>' + usd(pv, 2) + "</span></div>" +
-      '<div class="line"><span>Per mini / micro lot</span><span>' + usd(pv / 10, 2) + " / " + usd(pv / 100, 2) + "</span></div>";
+      '<div class="big">' + usd(lots * pv, 2) + (pt ? " / point" : " / pip") + "</div>" +
+      '<div class="line"><span>' + (pt ? "Per contract" : "Per standard lot") + "</span><span>" + usd(pv, 2) + "</span></div>" +
+      (pt ? '<div class="line"><span>Per tick (0.25 pt, futures)</span><span>' + usd(pv / 4, 2) + "</span></div>"
+          : '<div class="line"><span>Per mini / micro lot</span><span>' + usd(pv / 10, 2) + " / " + usd(pv / 100, 2) + "</span></div>");
   }
   ["pv-lots", "pv-rate", "pv-custom"].forEach(function (id) { $(id).addEventListener("input", pvCalc); });
   pvUpd();
@@ -2336,6 +2352,7 @@
     { name: "London killzone", tz: "Europe/London", label: "07:00–10:00 London", start: 7, end: 10, note: "Prime ICT window (sweeps of Asian range)" },
     { name: "New York", tz: "America/New_York", label: "08:00–17:00 New York", start: 8, end: 17, note: "USD news lands; NYSE opens 09:30 ET" },
     { name: "NY killzone", tz: "America/New_York", label: "08:30–11:30 New York", start: 8.5, end: 11.5, note: "Prime ICT window (US data + equity open)" },
+    { name: "NASDAQ cash session", tz: "America/New_York", label: "09:30–16:00 New York", start: 9.5, end: 16, note: "NQ/US100 prime hours — mentor model trades the first 1–2h" },
     { name: "London/NY overlap", tz: "America/New_York", label: "08:00–12:00 New York", start: 8, end: 12, note: "Deepest liquidity of the day" }
   ];
   function tzOffsetHours(tz, d) {

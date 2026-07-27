@@ -20,6 +20,7 @@ evaluation programs.
 | `docs/09-strategy-tutorials.md` | Plain-English tutorial for each strategy: steps, worked examples with real numbers, mistakes, checklists — also built into the app. |
 | `docs/10-mentor-course-notes.md` | Distilled mentor ICT course: manipulation vs displacement, IRL→ERL, time-based liquidity levels (with PHT times), no-bias scenarios, CSD/iFVG/SFP confirmations, flip logic, price-waiting, and his risk model. |
 | `docs/11-g2s-continuation-model.md` | The G2S Trades continuation model: sweep → with-trend displacement → confirmed FVG entry, with fib integration and built-in management; also loaded as a Planner checklist template. |
+| `docs/12-trading-nasdaq.md` | NASDAQ specifics: NQ/MNQ/US100 contract math, the index clock in PHT, SMT vs ES, earnings/news profile, and strategy fit. |
 
 ## The app (`index.html`)
 
