@@ -482,11 +482,11 @@
       <p class="sub">How many lots to trade for a fixed dollar risk.</p>
       <div class="row">
         <div class="field"><label for="ps-bal">Account balance ($)</label><input id="ps-bal" type="number" value="25000" step="100"></div>
-        <div class="field"><label for="ps-risk">Risk per trade (%)</label><input id="ps-risk" type="number" value="0.5" step="0.1" min="0"></div>
+        <div class="field"><label for="ps-risk">Risk per trade (%)</label><input id="ps-risk" type="number" value="1" step="0.1" min="0"></div>
       </div>
       <div class="row">
         <div class="field"><label for="ps-pair">Instrument</label><select id="ps-pair" class="pair-select"></select></div>
-        <div class="field"><label for="ps-stop">Stop-loss (pips / points)</label><input id="ps-stop" type="number" value="20" step="0.5" min="0.1"></div>
+        <div class="field"><label for="ps-stop">Stop-loss (pips / points)</label><input id="ps-stop" type="number" value="40" step="0.5" min="0.1"></div>
       </div>
       <details class="fold" style="margin-bottom:10px">
         <summary>Don't know the stop distance? Compute it from prices</summary>
@@ -513,9 +513,9 @@
         <div class="field"><label for="rr-dir">Direction</label><select id="rr-dir"><option>Long</option><option>Short</option></select></div>
       </div>
       <div class="row">
-        <div class="field"><label for="rr-entry">Entry</label><input id="rr-entry" type="number" value="1.0850" step="0.0001"></div>
-        <div class="field"><label for="rr-sl">Stop loss</label><input id="rr-sl" type="number" value="1.0830" step="0.0001"></div>
-        <div class="field"><label for="rr-tp">Take profit</label><input id="rr-tp" type="number" value="1.0895" step="0.0001"></div>
+        <div class="field"><label for="rr-entry">Entry</label><input id="rr-entry" type="number" value="27900" step="0.0001"></div>
+        <div class="field"><label for="rr-sl">Stop loss</label><input id="rr-sl" type="number" value="27860" step="0.0001"></div>
+        <div class="field"><label for="rr-tp">Take profit</label><input id="rr-tp" type="number" value="27980" step="0.0001"></div>
       </div>
       <div class="result" id="rr-out"></div>
     </div>
@@ -561,7 +561,7 @@
       <h3>Compound growth</h3>
       <p class="sub">Project steady monthly returns — the case for protecting capital.</p>
       <div class="row">
-        <div class="field"><label for="cg-start">Starting balance ($)</label><input id="cg-start" type="number" value="10000" step="100"></div>
+        <div class="field"><label for="cg-start">Starting balance ($)</label><input id="cg-start" type="number" value="25000" step="100"></div>
         <div class="field"><label for="cg-rate">Gain per month (%)</label><input id="cg-rate" type="number" value="4" step="0.5"></div>
         <div class="field"><label for="cg-months">Months</label><input id="cg-months" type="number" value="12" step="1" min="1" max="120"></div>
       </div>
@@ -616,15 +616,15 @@
       <div class="row">
         <div class="field"><label for="pl-pair">Pair</label><select id="pl-pair" class="pair-select"></select></div>
         <div class="field"><label for="pl-dir">Direction</label><select id="pl-dir"><option>Long</option><option>Short</option></select></div>
-        <div class="field"><label for="pl-session">Session</label><select id="pl-session"><option>London</option><option>New York</option><option>London/NY overlap</option><option>Tokyo</option><option>Sydney</option></select></div>
+        <div class="field"><label for="pl-session">Session</label><select id="pl-session"><option>New York</option><option>London</option><option>London/NY overlap</option><option>Tokyo</option><option>Sydney</option></select></div>
       </div>
       <div class="row">
-        <div class="field"><label for="pl-entry">Entry</label><input id="pl-entry" type="number" step="0.0001" value="1.0850"></div>
-        <div class="field"><label for="pl-sl">Stop loss</label><input id="pl-sl" type="number" step="0.0001" value="1.0830"></div>
-        <div class="field"><label for="pl-tp">Take profit</label><input id="pl-tp" type="number" step="0.0001" value="1.0895"></div>
+        <div class="field"><label for="pl-entry">Entry</label><input id="pl-entry" type="number" step="0.0001" value="27900"></div>
+        <div class="field"><label for="pl-sl">Stop loss</label><input id="pl-sl" type="number" step="0.0001" value="27860"></div>
+        <div class="field"><label for="pl-tp">Take profit</label><input id="pl-tp" type="number" step="0.0001" value="27980"></div>
       </div>
       <div class="row">
-        <div class="field"><label for="pl-risk">Risk (%)</label><input id="pl-risk" type="number" step="0.1" value="0.5"></div>
+        <div class="field"><label for="pl-risk">Risk (%)</label><input id="pl-risk" type="number" step="0.1" value="1"></div>
         <div class="field"><label for="pl-setup">Setup / strategy</label><input id="pl-setup" type="text" placeholder="e.g. London breakout pullback"></div>
       </div>
       <div class="field"><label for="pl-notes">Why this trade? (thesis, key levels, invalidation)</label><textarea id="pl-notes" rows="3" placeholder="Higher-timeframe trend up, price pulled back to 1.0850 support + 50 EMA, bullish engulfing on H1…"></textarea></div>
@@ -635,7 +635,7 @@
         <label for="pl-ckt">Checklist template</label>
         <select id="pl-ckt">
           <option value="generic">General (any strategy)</option>
-          <option value="g2s">G2S Continuation Model</option>
+          <option value="g2s" selected>G2S Continuation Model</option>
         </select>
       </div>
       <p class="sub" id="pl-ckhint"></p>
@@ -711,7 +711,7 @@
       <div class="row">
         <div class="field"><label for="j-acct">Account</label><select id="j-acct"><option value="demo">Demo / backtest</option><option value="live">Live / evaluation</option></select></div>
         <div class="field"><label for="j-sess">Session</label><select id="j-sess"><option>Auto</option><option>Tokyo</option><option>London</option><option>New York</option><option>Off-hours</option></select></div>
-        <div class="field"><label for="j-risk">Risk (%)</label><input id="j-risk" type="number" step="0.1" value="0.5" min="0">
+        <div class="field"><label for="j-risk">Risk (%)</label><input id="j-risk" type="number" step="0.1" value="1" min="0">
           <div class="hint">Used to compute risk $ and P/L $.</div>
         </div>
       </div>
@@ -1349,9 +1349,9 @@
 
   // ---------- pairs & pip math (USD account) ----------
   var PAIRS = {
+    "US100 CFD": { kind: "custom", unit: "point" },
     "NQ (Nasdaq 100)": { kind: "fixedpt", val: 20, unit: "point" },
     "MNQ (Micro Nasdaq)": { kind: "fixedpt", val: 2, unit: "point" },
-    "US100 CFD": { kind: "custom", unit: "point" },
     "ES (S&P 500)": { kind: "fixedpt", val: 50, unit: "point" },
     "EURUSD": { kind: "usdQuote" }, "GBPUSD": { kind: "usdQuote" }, "AUDUSD": { kind: "usdQuote" }, "NZDUSD": { kind: "usdQuote" },
     "USDJPY": { kind: "usdBase", pip: 0.01, rateLabel: "Current USDJPY rate" },
