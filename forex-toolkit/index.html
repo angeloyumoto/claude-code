@@ -499,8 +499,8 @@
         </div>
       </details>
       <div class="field" id="ps-rate-wrap" hidden><label for="ps-rate" id="ps-rate-label">Rate</label><input id="ps-rate" type="number" value="150" step="0.0001"></div>
-      <div class="field" id="ps-custom-wrap" hidden><label for="ps-custom">$ per pip/point per lot</label><input id="ps-custom" type="number" value="10" step="0.01">
-        <div class="hint">US100 CFD point value varies by broker — check your firm's contract specs (often $1 or $10 per point per 1.0 lot).</div>
+      <div class="field" id="ps-custom-wrap" hidden><label for="ps-custom">$ per pip/point per lot</label><input id="ps-custom" type="number" value="1" step="0.01">
+        <div class="hint">Set from MT5: Market Watch → US100 → Specification → Contract Size. Yours = 1, so 1.0 lot = $1/point.</div>
       </div>
       <div class="result" id="ps-out"></div>
     </div>
@@ -528,7 +528,7 @@
         <div class="field"><label for="pv-lots">Lots</label><input id="pv-lots" type="number" value="1" step="0.01" min="0"></div>
       </div>
       <div class="field" id="pv-rate-wrap" hidden><label for="pv-rate" id="pv-rate-label">Rate</label><input id="pv-rate" type="number" value="150" step="0.0001"></div>
-      <div class="field" id="pv-custom-wrap" hidden><label for="pv-custom">Pip value per standard lot ($)</label><input id="pv-custom" type="number" value="10" step="0.01"></div>
+      <div class="field" id="pv-custom-wrap" hidden><label for="pv-custom">$ per pip/point per lot</label><input id="pv-custom" type="number" value="1" step="0.01"></div>
       <div class="result" id="pv-out"></div>
     </div>
 
