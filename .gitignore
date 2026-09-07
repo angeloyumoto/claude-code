@@ -1,2 +1,5 @@
 .DS_Store
 
+
+# Taught unslop voice profiles (user data)
+.unslop/
