@@ -1834,10 +1834,6 @@ if newPlan
         tpTxt := tpTxt + " · TP" + str.tostring(i + 1) + " " + f_price(tp)
     alert("NEW IDEA · G2S " + (st.plDir == 1 ? "Bull" : "Bear") + " · Grade " + st.plGrade + " · " + st.plFamily + " · " + st.plModel + " (" + st.plLed + ") · " + syminfo.ticker + " " + chartTfLabel + " · Entry " + f_price(st.plEntry) + " · SL " + f_price(st.plSl) + tpTxt + " · " + (st.plState == 2 ? "ACTIVE" : "Pending"), alert.freq_once_per_bar_close)
 
-alertcondition(sweepEvent, "G2S · Liquidity sweep", "G2S Compass: liquidity sweep on {{ticker}} {{interval}}")
-alertcondition(reactEvent, "G2S · Directional reaction", "G2S Compass: displacement / sharp reversal on {{ticker}} {{interval}}")
-alertcondition(smtEvent, "G2S · SMT recorded", "G2S Compass: SMT divergence on {{ticker}} {{interval}}")
-alertcondition(newPlan, "G2S · Trade plan ready", "G2S Compass: NEW IDEA on {{ticker}} {{interval}} — review the chart")
 
 // ───────────────────────────── Backtest orders (strategy build only) ─────────────────────────────
 // Enters at the close of the bar on which a plan becomes ACTIVE, scales out at TP1 / TP2 / TP3 with the
@@ -1850,7 +1846,7 @@ if confirmed
     if st.plState == 2 and strategy.position_size == 0 and (na(btPlanBar) or btPlanBar != st.plBar)
         btPlanBar := st.plBar
         strategy.entry("G2S", st.plDir == 1 ? strategy.long : strategy.short, comment = st.plGrade + " " + st.plModel)
-    if strategy.position_size != 0 and st.plState == 2
+    if st.plState == 2 and btPlanBar == st.plBar
         slNow = btBreakeven and st.plHit >= 1 ? st.plEntry : st.plSl
         nT = array.size(st.plTps)
         if btSplit and nT >= 2
