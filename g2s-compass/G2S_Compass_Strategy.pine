@@ -125,7 +125,7 @@ vpVaPct    = input.float(70, "Value area %", minval = 50, maxval = 95, step = 1,
 showDev = input.bool(true, "Levels · DEV", inline = "vr", group = G6)
 showOv  = input.bool(true, "OV", inline = "vr", group = G6)
 showPd  = input.bool(true, "PD", inline = "vr", group = G6)
-showPw  = input.bool(false, "PW", inline = "vr", group = G6, tooltip = "Which profiles' VAH / POC / VAL are drawn AND used for VP context, stacked-level confluence and targets. Line style: DEV solid · OV dashed · PD / PW dotted; reference profiles draw lighter.")
+showPw  = input.bool(true, "PW", inline = "vr", group = G6, tooltip = "Which profiles' VAH / POC / VAL are drawn AND used for VP context, stacked-level confluence and targets. Line style: DEV solid · OV dashed · PD / PW dotted; reference profiles draw lighter.")
 vahCol  = input.color(#3d85c6, "VAH", inline = "vl", group = G6)
 pocCol  = input.color(#d9453b, "POC", inline = "vl", group = G6)
 valCol  = input.color(#3d85c6, "VAL", inline = "vl", group = G6)
