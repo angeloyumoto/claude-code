@@ -1,8 +1,8 @@
 # Builds the Strategy Tester variant from the indicator so both stay in sync.
 src = open("/home/user/claude-code/g2s-compass/G2S_Compass.pine", encoding="utf-8").read()
-old = 'indicator("G2S Compass · Rebuild", shorttitle = "G2S", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)'
+old = 'indicator("G2S Compass · Rebuild", shorttitle = "G2S", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500, dynamic_requests = true)'
 assert old in src
-new = 'strategy("G2S Compass · Rebuild (backtest)", shorttitle = "G2S-BT", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500, initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 3, process_orders_on_close = true, calc_on_every_tick = false)'
+new = 'strategy("G2S Compass · Rebuild (backtest)", shorttitle = "G2S-BT", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500, dynamic_requests = true, initial_capital = 100000, default_qty_type = strategy.fixed, default_qty_value = 3, process_orders_on_close = true, calc_on_every_tick = false)'
 out = src.replace(old, new, 1)
 out = out.replace("//  G2S Compass · Community Rebuild\n", "//  G2S Compass · Community Rebuild — STRATEGY BUILD for the Strategy Tester (same engine as the indicator)\n", 1)
 import re

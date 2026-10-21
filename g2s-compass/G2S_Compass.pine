@@ -12,7 +12,7 @@
 //
 //  Decision support only. It does not place trades or guarantee anything.
 // ─────────────────────────────────────────────────────────────────────────────
-indicator("G2S Compass · Rebuild", shorttitle = "G2S", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500)
+indicator("G2S Compass · Rebuild", shorttitle = "G2S", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500, dynamic_requests = true)
 
 const string TZ = "America/New_York"
 
