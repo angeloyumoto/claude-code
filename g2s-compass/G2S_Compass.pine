@@ -13,6 +13,10 @@
 //  Decision support only. It does not place trades or guarantee anything.
 // ─────────────────────────────────────────────────────────────────────────────
 indicator("G2S Compass · Rebuild", shorttitle = "G2S", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500, max_bars_back = 500, dynamic_requests = true)
+// Drawings convert bar-index coordinates to timestamps through `time`; an old gap's edge set thousands of bars back
+// needs that buffer (runtime error RE10143 otherwise). 5000 is the maximum; every edge is also clamped to that reach.
+max_bars_back(time, 5000)
+const int DRAW_REACH = 4500
 
 const string TZ = "America/New_York"
 
@@ -1329,7 +1333,7 @@ f_htfProcess(array<Fvg> arr, array<int> opens, bool enabled, string tf, float h1
         f_fvgUpdate(arr, true, c1)
         rs = isLtf and htfPlace == "Right Side" and sec >= 900
         nOpen = array.size(opens)
-        anchor = nOpen >= 3 ? array.get(opens, nOpen - 3) : bar_index   // open bar of the displacement candle
+        anchor = math.max(bar_index - DRAW_REACH, nOpen >= 3 ? array.get(opens, nOpen - 3) : bar_index)   // open bar of the displacement candle, within drawing reach
         minH = math.max(minGap, htfMinPts)
         gapB = l1 - h3
         gapS = l3 - h1
@@ -2054,7 +2058,7 @@ f_gapVis(array<Fvg> arr, array<Fvg> higher, bool on, bool ltf, float nearMult) =
             live = not ltf or planGap or inIdea or young
             show = not covered and (ltf ? (live or f.traded) : (f.ses == fvgSes or near))
             if not f.rightSide
-                xr = live ? bar_index + 4 : math.min(f.barIdx + ltfShowBars, bar_index)
+                xr = live ? bar_index + 4 : math.max(bar_index - DRAW_REACH, math.min(f.barIdx + ltfShowBars, bar_index))
                 box.set_right(f.bx, xr)
                 if not na(f.ce)
                     line.set_x2(f.ce, xr)
