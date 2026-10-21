@@ -93,6 +93,8 @@ FVG entries use the near boundary by default (switchable to 50%, far edge, or co
 
 Fewer, better-aligned ideas is the usual effect; measure it with the Stats row and the strategy build before trusting it.
 
+**Shadow ideas (past setups stay visible).** With `Track filtered setups too` (default on) every complete candidate the gates refuse (grade below the floor, over the session cap, quality floor, HTF bias, outside the window, cooldown, or while a plan is live) is followed through the same lifecycle as a saved plan, without drawings, alerts or session counting. When it ends it gets the same tag as a saved idea (`B L ✓`, `A S ✗`, `○` expired or scratch) drawn faint beyond its original stop, and the hover text says why it was filtered. One shadow runs at a time and the same zone or level is not followed twice. The panel shows two stats lines: `Saved · …` for the ideas the floor kept and `Filtered · …` for the shadows, so the effect of the gates can be read directly. Tags (saved and shadow, up to 200) stay on the chart for `Keep idea tags for (days)` (default 3) at the chosen `tag size`.
+
 ## Settings worth knowing
 
 * **G2S View** – Compass · Complete / Playbook · Price Action (no VP) / Value · Volume Profile (no checklist, FVG or SMT) / Minimal · Clean Chart.
@@ -100,13 +102,13 @@ Fewer, better-aligned ideas is the usual effect; measure it with the Stats row a
 * **Sessions** – every session string is editable, in New York time. VP sessions default to Asia/London 18:00–09:29 and New York 09:30–16:59.
 * **Volume Profile** – target rows (200 by default; actual rows are tick-aligned so the count varies), value-area %, histogram mode, Left/Right placement (Right = next to live price / right-aligned at session end), width in bars (scaled down automatically on higher timeframes), per-level colours, NY PM restart, DEV eligibility delay in bars. DEV levels are drawn from the first bar and carry a `*` until eligible.
 * **FVGs** – middle-close filter, minimum size in points or ATR fraction, label mode (`1m` or `1m FVG`), six HTF slots with their own 10-point minimum, placement and right-side offset/width, `Show older gaps within (ATR ×)`, linked-FVG promotion (Auto/On/Off).
-* **Trade plan** – FVG entry reference, stop reference (structure ladder by default), buffer in ticks / ATR, optional ATR fallback, max stop and target distance, TP1 minimum and spacing, pending expiry and close confirmation, active timeout, breakeven rule, result window, stats row, minimum grade, trading window, market structure shift, ideas per session.
+* **Trade plan** – FVG entry reference, stop reference (structure ladder by default), buffer in ticks / ATR, optional ATR fallback, max stop and target distance, TP1 minimum and spacing, pending expiry and close confirmation, active timeout, breakeven rule, result window, stats row, minimum grade, trading window, market structure shift, ideas per session, shadow tracking of filtered setups, tag retention and size.
 
 ## Backtesting and win rate
 
 Nothing here guarantees a win rate; the G2S documents say it plainly ("A+ can lose. B can win."). Two ways to measure instead of guess:
 
-1. **Stats row** on the panel: ideas saved on the loaded history, win rate (TP1 reached before the stop), TP3 rate, stop-outs, expired/stale ideas. It updates live and resets when the chart reloads. Read it as a filter gauge: more stops than wins means loosen nothing and tighten the gates (quality floor, HTF bias, minimum grade, trading window) until the mix flips, then confirm in the Strategy Tester, where breakeven-after-TP1 and scale-outs decide the actual expectancy.
+1. **Stats rows** on the panel: `Saved` = ideas saved on the loaded history, win rate (TP1 reached before the stop), TP3 rate, stop-outs, expired/stale ideas; `Filtered` = the same for the shadow ideas the gates refused. Both update live and reset when the chart reloads. Read it as a filter gauge: more stops than wins means loosen nothing and tighten the gates (quality floor, HTF bias, minimum grade, trading window) until the mix flips, then confirm in the Strategy Tester, where breakeven-after-TP1 and scale-outs decide the actual expectancy.
 2. **`G2S_Compass_Strategy.pine`**: the same engine declared as a `strategy`. Add it to a chart and open the Strategy Tester for net profit, profit factor, win rate and the trade list. It enters at the close of the bar on which a plan becomes ACTIVE, scales out a third at each target with the shared stop, moves the stop to breakeven after TP1 (switchable), and flattens when the plan ends. Fills use TradingView's intrabar model, so counts can differ slightly from the indicator's bar-close tracking. Regenerate it from the indicator with `gen_strategy.py` whenever the indicator changes.
 
 Use the grade and session filters, the stop cap and the timeframe to tune selectivity, and compare symbols and timeframes before trading any of it.

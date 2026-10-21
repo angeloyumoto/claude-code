@@ -175,7 +175,10 @@ sesIdeaCap  = input.int(1, "Ideas per session (0 = unlimited)", minval = 0, inli
 apExtra     = input.bool(true, "A+ may add one", inline = "sc", group = G7, tooltip = "Checklist discipline: one setup per session unless another A+ appears. A session here is a Volume Profile session (AL / NY / PM restart); expired ideas count too, so the saved idea is the one you take.")
 tradeWindow = input.string("NY AM + PM", "during", options = ["Any", "NY AM + PM", "NY AM only"], inline = "fl", group = G7, tooltip = "B = one complete entry model. A = sweep + reaction AND VP alignment (same direction). A+ = A plus two confluences (HTF FVG, SMT, external sweep, stacked VP levels). Default A: only complete, aligned setups are saved and alerted. The Playbook view has no VP, so there the floor is B. Ideas outside the window are not saved and do not alert.")
 showStats   = input.bool(true, "Stats row (ideas · win rate)", inline = "st", group = G7)
-markIdeas   = input.bool(true, "Mark past ideas", inline = "st", group = G7, tooltip = "Stats: ideas saved since the chart loaded; win % = reached TP1 among decided ideas; TP3 % = fully completed. Marks: a tiny tag beyond each past idea's stop with grade and outcome (✓ TP1, ✗ stopped, ○ expired); hover for entry / stop / targets.")
+markIdeas   = input.bool(true, "Mark past ideas", inline = "st", group = G7, tooltip = "Stats: ideas saved since the chart loaded; win % = reached TP1 among decided ideas; TP3 % = fully completed. Marks: a tag beyond each past idea's stop with grade and outcome (✓ TP1, ✗ stopped, ○ expired); hover for entry / stop / targets.")
+trackAll    = input.bool(true, "Track filtered setups too (shadow ideas)", group = G7, tooltip = "Setups the gates refuse (grade below the floor, over the session cap, quality floor, HTF bias, outside the window, cooldown, or while a plan is live) are followed as SHADOW ideas: never saved, drawn or alerted, but their outcome is tagged on the chart (faint tag, hover shows why it was filtered) and counted on a second stats line, so you can compare what the floor filtered against what it kept. One shadow at a time; the same zone is not followed twice.")
+markDays    = input.int(3, "Keep idea tags for (days)", minval = 1, maxval = 30, inline = "md", group = G7)
+markSizeIn  = input.string("Small", "tag size", options = ["Tiny", "Small", "Normal"], inline = "md", group = G7, tooltip = "Tags: grade · L / S · ✓ TP1 reached / ✗ stopped / ○ expired or scratch. Saved ideas draw solid, shadow ideas faint. Up to 200 tags; older ones are removed after this many days.")
 
 // Alerts: the NEW IDEA alert() fires whenever a plan is saved; it does not depend on any checkbox
 // (the original removed that dependency so alerts cannot be silenced by a stale setting).
@@ -206,6 +209,7 @@ panelSize = panelSizeIn == "Tiny" ? size.tiny : panelSizeIn == "Normal" ? size.n
 planSize  = planSizeIn == "Small" ? size.small : planSizeIn == "Large" ? size.large : size.normal
 planSubSize = planSizeIn == "Small" ? size.tiny : planSizeIn == "Large" ? size.normal : size.small
 fvgTxtSz  = fvgTextSize == "Tiny" ? size.tiny : fvgTextSize == "Normal" ? size.normal : size.small
+markSize  = markSizeIn == "Tiny" ? size.tiny : markSizeIn == "Normal" ? size.normal : size.small
 
 f_pos(string s) =>
     s == "Top Left" ? position.top_left : s == "Bottom Right" ? position.bottom_right : s == "Bottom Left" ? position.bottom_left : position.top_right
@@ -448,6 +452,32 @@ type State
     int    ideaSes
     int    ideaCount
 
+// A refused setup followed to its outcome (never saved, drawn or alerted) so past ideas stay visible and countable.
+type Shadow
+    int    state        // 0 none · 1 pending · 2 active
+    int    dir
+    float  entry
+    float  sl
+    array<float> tps
+    int    hit
+    int    bar
+    string grade
+    string model
+    string family
+    string led
+    float  R
+    bool   be
+    Fvg    fvg
+    string why
+    int    lastFvgBar   // zone / level of the last shadow, so a re-hit does not start another
+    string lastFvgTf
+    int    lastVpBar
+    int    nPlans
+    int    nWin
+    int    nLoss
+    int    nFull
+    int    nExp
+
 // ───────────────────────────── Session liquidity ledger ─────────────────────────────
 f_newSes(string name, string abbr, string sess, color col, bool show, bool isPd) =>
     Ses.new(name = name, abbr = abbr, sess = sess, col = col, show = show, isPd = isPd, active = false, done = false, hiTaken = false, loTaken = false)
@@ -602,6 +632,7 @@ f_pivScan() =>
 // ───────────────────────────── Engine state ─────────────────────────────
 var array<label> sweepMarks = array.new<label>()
 var State st = State.new(swDir = 0, swName = "", swExternal = false, reactOK = false, reactType = "", reactDir = 0, lastNote = "", smtDir = 0, smtWho = "", vpDir = 0, vpRole = "", vpLevel = "", vpKind = "", holdCount = 0, vpModel = "", plState = 0, plDir = 0, plTps = array.new<float>(), plHit = 0, plGrade = "", plModel = "", plFamily = "", plLed = "", plVpBasis = "", lastResult = "", lnTps = array.new<line>(), lbTps = array.new<label>(), lastModel = "", lastModelLed = "", nPlans = 0, nWin = 0, nLoss = 0, nFull = 0, nExp = 0, mssOK = false, plBe = false, ideaSes = -1, ideaCount = 0)
+var Shadow sh = Shadow.new(state = 0, dir = 0, tps = array.new<float>(), hit = 0, be = false, why = "", lastFvgBar = -1, lastFvgTf = "", lastVpBar = -1, nPlans = 0, nWin = 0, nLoss = 0, nFull = 0, nExp = 0)
 
 // ───────────────────────────── Volume Profile engine ─────────────────────────────
 f_newProfile(string kind, float rowSize) =>
@@ -1311,15 +1342,64 @@ f_planClear() =>
     array.clear(st.lbTps)
 
 var array<label> ideaMarks = array.new<label>()
-f_markIdea(int state) =>
+var array<int>   ideaMarkT = array.new<int>()
+f_pruneMarks() =>
+    while array.size(ideaMarks) > 200 or (array.size(ideaMarkT) > 0 and time - array.get(ideaMarkT, 0) > markDays * 86400000)
+        label.delete(array.shift(ideaMarks))
+        array.shift(ideaMarkT)
+
+// tag beyond the idea's original stop: grade · L / S · outcome. Saved ideas solid, shadow ideas faint with the reason in the hover text.
+f_markTag(int bar, int dir, string grade, int hit, int nT, float entry, float R, string family, string model, string led, string result, int state, string why) =>
     if useIdeaMk
-        win = st.plHit >= 1
-        txt = st.plGrade + (st.plDir == 1 ? " L " : " S ") + (win ? "✓" : state == 4 ? "✗" : "○")
+        win = hit >= 1
+        shadow = why != ""
+        y = dir == 1 ? entry - R : entry + R
+        txt = grade + (dir == 1 ? " L " : " S ") + (win ? "✓" : state == 4 ? "✗" : "○")
         c = win ? bullCol : state == 4 ? bearCol : color.gray
-        tip = st.plFamily + " · " + st.plModel + " (" + st.plLed + ")\nEntry " + f_price(st.plEntry) + " · SL " + f_price(st.plSl) + " · R " + f_price(math.abs(st.plEntry - st.plSl)) + "\nTargets hit: " + str.tostring(st.plHit) + "/" + str.tostring(array.size(st.plTps)) + "\n" + st.lastResult
-        array.push(ideaMarks, label.new(st.plBar, st.plSl, txt, style = st.plDir == 1 ? label.style_label_up : label.style_label_down, color = color.new(c, 20), textcolor = color.white, size = size.tiny, tooltip = tip))
-        while array.size(ideaMarks) > 120
-            label.delete(array.shift(ideaMarks))
+        tip = (shadow ? "Not saved · " + why + "\n" : "Saved idea\n") + family + " · " + model + " (" + led + ")\nEntry " + f_price(entry) + " · SL " + f_price(y) + " · R " + f_price(R) + "\nTargets hit: " + str.tostring(hit) + "/" + str.tostring(nT) + "\n" + result
+        array.push(ideaMarks, label.new(bar, y, txt, style = dir == 1 ? label.style_label_up : label.style_label_down, color = color.new(c, shadow ? 72 : 20), textcolor = shadow ? color.new(chart.fg_color, 25) : color.white, size = markSize, tooltip = tip))
+        array.push(ideaMarkT, time)
+        f_pruneMarks()
+
+f_markIdea(int state) =>
+    f_markTag(st.plBar, st.plDir, st.plGrade, st.plHit, array.size(st.plTps), st.plEntry, st.plR, st.plFamily, st.plModel, st.plLed, st.lastResult, state, "")
+
+f_shEnd(int state, string result) =>
+    if state == 3
+        sh.nFull += 1
+    if sh.hit >= 1
+        sh.nWin += 1
+    else if state == 4
+        sh.nLoss += 1
+    else
+        sh.nExp += 1
+    f_markTag(sh.bar, sh.dir, sh.grade, sh.hit, array.size(sh.tps), sh.entry, sh.R, sh.family, sh.model, sh.led, result, state, sh.why)
+    sh.state := 0
+
+f_shStart(int d, float entry, float sl, float R, array<float> tps, string grade, string model, string family, string led, bool liveNow, Fvg f, string why) =>
+    sh.state := liveNow ? 2 : 1
+    sh.dir := d
+    sh.entry := entry
+    sh.sl := sl
+    sh.R := R
+    sh.tps := tps
+    sh.hit := 0
+    sh.bar := bar_index
+    sh.grade := grade
+    sh.model := model
+    sh.family := family
+    sh.led := led
+    sh.be := false
+    sh.fvg := f
+    sh.why := why
+    sh.lastVpBar := st.vpBar
+    if not na(f)
+        sh.lastFvgBar := f.barIdx
+        sh.lastFvgTf := f.tf
+    else
+        sh.lastFvgBar := -1
+        sh.lastFvgTf := ""
+    sh.nPlans += 1
 
 f_planEnd(int state, string result) =>
     st.plState := state
@@ -1406,6 +1486,51 @@ if confirmed and (st.plState == 1 or st.plState == 2)
 
 if confirmed and st.plState == 3 and bar_index - st.plEndBar > resultBars and not na(st.lnEntry)
     f_planClear()
+
+// ── Shadow idea: the same lifecycle as the live plan, without drawings, alerts or session counting ──
+if confirmed and (sh.state == 1 or sh.state == 2)
+    d = sh.dir
+    n = array.size(sh.tps)
+    actNow = false
+    if sh.state == 1
+        touched   = d == 1 ? low <= sh.entry : high >= sh.entry
+        heldClose = not confirmFill or (d == 1 ? close > sh.entry : close < sh.entry)
+        gapFailed = false
+        if confirmFill and not na(sh.fvg)
+            gapFailed := d == 1 ? close < sh.fvg.bottom : close > sh.fvg.top
+        if bar_index - sh.bar > pendingBars
+            f_shEnd(5, "Expired · no activation")
+        else if (d == 1 ? low <= sh.sl : high >= sh.sl)
+            f_shEnd(confirmFill ? 5 : 4, confirmFill ? "Expired · stop swept before entry" : "Setup Invalid · SL before activation")
+        else if gapFailed
+            f_shEnd(5, "Expired · zone failed before entry")
+        else if touched and heldClose
+            sh.state := 2
+            actNow := true
+    if sh.state == 2
+        if (d == 1 ? low <= sh.sl : high >= sh.sl)
+            if sh.be
+                f_shEnd(sh.hit >= 1 ? 4 : 5, sh.hit >= 1 ? "Breakeven · stopped at entry after TP" + str.tostring(sh.hit) : "Breakeven · scratch at entry")
+            else
+                f_shEnd(4, "Setup Invalid · SL hit")
+        else if sh.hit == 0 and bar_index - sh.bar > planMaxBars
+            f_shEnd(5, "Stale · timed out")
+        else if not actNow
+            k = sh.hit
+            while k < n
+                if (d == 1 ? high >= array.get(sh.tps, k) : low <= array.get(sh.tps, k))
+                    sh.hit := k + 1
+                    k += 1
+                else
+                    k := n
+            if sh.hit >= n
+                f_shEnd(3, "TP" + str.tostring(n) + " ✓ · Complete")
+            else if beMode != "Off" and not sh.be and (sh.hit >= 1 or (beMode == "After 1R or TP1" and (d == 1 ? high >= sh.entry + sh.R : low <= sh.entry - sh.R)))
+                sh.be := true
+                sh.sl := sh.entry
+
+if confirmed and array.size(ideaMarkT) > 0
+    f_pruneMarks()
 
 // ───────────────────────────── Entry models → trade plan ─────────────────────────────
 paDir  = (st.swDir == 1 or st.swDir == -1) and st.reactOK ? st.swDir : 0
@@ -1625,8 +1750,11 @@ if drawPlanNow
 
 cooled = coolStop and dirNow == nz(st.coolDir) and ((st.swDir == dirNow and st.swBar == nz(st.coolSwBar, -1)) or (st.vpDir == dirNow and st.vpBar == nz(st.coolVpBar, -1)))
 newPlan = false
+// a plan may be saved on this bar (save slot); otherwise a complete candidate can still be followed as a shadow idea
+saveSlot   = windowOK and not cooled and st.plState != 1 and st.plState != 2 and (nz(st.plEndBar, -1) != bar_index or (st.plState == 4 and st.plDir != dirNow))
+shadowSlot = trackAll and useIdeaMk and sh.state == 0
 
-if confirmed and windowOK and not cooled and st.plState != 1 and st.plState != 2 and st.swDir != 2 and (nz(st.plEndBar, -1) != bar_index or (st.plState == 4 and st.plDir != dirNow)) and (dirNow == 1 or dirNow == -1)
+if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or dirNow == -1)
     d = dirNow
     string model = ""
     string led = ""
@@ -1678,22 +1806,18 @@ if confirmed and windowOK and not cooled and st.plState != 1 and st.plState != 2
         structStop := d == 1 ? math.min(st.vpModelExt, L0) : math.max(st.vpModelExt, L0)
         basis := st.vpRole + " " + st.vpLevel
         liveNow := true
-    if model != "" and not na(entry) and not f_biasOK(d)
-        st.lastNote := "Filtered · against HTF bias · " + htfBias
-        st.lastNoteBar := bar_index
-        if led == "VP-led"
-            f_vpReset()
-        model := ""
+    biasOK = model == "" or na(entry) or f_biasOK(d)
     if model != "" and not na(entry)
         // no structure within reach = no idea (unless the ATR stop is allowed): a stop nothing protects is the stop that gets hit
         buf0 = math.max(slBufTicks * tick, slBufAtr * atr)
         sl0 = d == 1 ? structStop - buf0 : structStop + buf0
         noStruct = na(sl0) or (d == 1 ? sl0 >= entry - tick : sl0 <= entry + tick) or math.abs(entry - sl0) < 0.25 * atr or math.abs(entry - sl0) > maxSlAtr * atr + buf0
         if noStruct and not atrFallback and stopRefIn != "ATR Stop"
-            st.lastNote := "Waiting · no structural stop within " + str.tostring(maxSlAtr) + " ATR · " + model
-            st.lastNoteBar := bar_index
-            if led == "VP-led"
-                f_vpReset()
+            if saveSlot
+                st.lastNote := "Waiting · no structural stop within " + str.tostring(maxSlAtr) + " ATR · " + model
+                st.lastNoteBar := bar_index
+                if led == "VP-led"
+                    f_vpReset()
             model := ""
     if model != "" and not na(entry)
         buf = math.max(slBufTicks * tick, slBufAtr * atr)
@@ -1722,12 +1846,26 @@ if confirmed and windowOK and not cooled and st.plState != 1 and st.plState != 2
             st.ideaSes := fvgSes
             st.ideaCount := 0
         capOK = sesIdeaCap == 0 or st.ideaCount < sesIdeaCap or (apExtra and gradeNow == "A+" and st.ideaCount < sesIdeaCap + 1)
-        if not gradeOK or not floorOK or not capOK
-            st.lastNote := not floorOK ? "Filtered · quality floor" : not gradeOK ? "Filtered · grade " + gradeNow + " below " + gradeFloor : "Filtered · " + str.tostring(sesIdeaCap) + " idea" + (sesIdeaCap == 1 ? "" : "s") + " per session" + (apExtra ? " (A+ may add one)" : "")
-            st.lastNoteBar := bar_index
-            if led == "VP-led"
-                f_vpReset()
-        else if array.size(tps) > 0
+        canSave = saveSlot and biasOK and gradeOK and floorOK and capOK and array.size(tps) > 0
+        if not canSave
+            if saveSlot
+                st.lastNote := array.size(tps) == 0 ? "Waiting for targets · " + model : not biasOK ? "Filtered · against HTF bias · " + htfBias : not floorOK ? "Filtered · quality floor" : not gradeOK ? "Filtered · grade " + gradeNow + " below " + gradeFloor : "Filtered · " + str.tostring(sesIdeaCap) + " idea" + (sesIdeaCap == 1 ? "" : "s") + " per session" + (apExtra ? " (A+ may add one)" : "")
+                st.lastNoteBar := bar_index
+                if led == "VP-led"
+                    f_vpReset()
+            // follow the refused setup as a shadow idea (once per zone / level) so its outcome can be tagged and counted
+            dupShadow = false
+            if not na(usedFvg)
+                dupShadow := usedFvg.barIdx == sh.lastFvgBar and usedFvg.tf == sh.lastFvgTf
+            else
+                dupShadow := st.vpBar == sh.lastVpBar
+            if shadowSlot and array.size(tps) > 0 and not dupShadow
+                why = not saveSlot ? (st.plState == 1 or st.plState == 2 ? "a plan was already live" : not windowOK ? "outside the trading window or in a quiet period" : cooled ? "cooldown after a stop-out" : "same bar as the last result") : not biasOK ? "against the HTF bias (" + htfBias + ")" : not floorOK ? "quality floor (no external sweep)" : not gradeOK ? "grade " + gradeNow + " below " + gradeFloor : "ideas-per-session cap"
+                f_shStart(d, entry, sl, R, tps, gradeNow, model, family, led, liveNow, usedFvg, why)
+        else
+            // a saved plan on the zone a shadow was following makes the shadow redundant
+            if sh.state != 0 and not na(usedFvg) and not na(sh.fvg) and sh.fvg.barIdx == usedFvg.barIdx and sh.fvg.tf == usedFvg.tf
+                sh.state := 0
             st.plState := liveNow ? 2 : 1
             st.plDir := d
             st.plEntry := entry
@@ -1759,11 +1897,6 @@ if confirmed and windowOK and not cooled and st.plState != 1 and st.plState != 2
             newPlan := true
             if liveNow
                 f_planDraw()
-        else
-            st.lastNote := "Waiting for targets · " + model
-            st.lastNoteBar := bar_index
-            if led == "VP-led"
-                f_vpReset()
 
 if confirmed and st.plState == 2 and not na(st.lnEntry)
     x2 = bar_index + 17
@@ -2009,7 +2142,9 @@ if barstate.islast
         macroBg  = macroOn ? color.new(okCol, 85) : color.new(color.white, 100)
         confOK = planLive or (resultFresh and st.plState == 3) or st.reactOK or st.vpModel != ""
         decided = st.nWin + st.nLoss
-        statsTxt = str.tostring(st.nPlans) + " ideas · win " + (decided > 0 ? str.tostring(math.round(100.0 * st.nWin / decided)) + "%" : "–") + " (TP1) · TP3 " + (decided > 0 ? str.tostring(math.round(100.0 * st.nFull / decided)) + "%" : "–") + " · stops " + str.tostring(st.nLoss) + " · expired / scratch " + str.tostring(st.nExp)
+        shDecided = sh.nWin + sh.nLoss
+        shadowTxt = "Filtered · " + str.tostring(sh.nPlans) + " · win " + (shDecided > 0 ? str.tostring(math.round(100.0 * sh.nWin / shDecided)) + "%" : "–") + " · TP3 " + (shDecided > 0 ? str.tostring(math.round(100.0 * sh.nFull / shDecided)) + "%" : "–") + " · stops " + str.tostring(sh.nLoss) + " · exp " + str.tostring(sh.nExp)
+        statsTxt = (trackAll ? "Saved · " : "") + str.tostring(st.nPlans) + " ideas · win " + (decided > 0 ? str.tostring(math.round(100.0 * st.nWin / decided)) + "%" : "–") + " (TP1) · TP3 " + (decided > 0 ? str.tostring(math.round(100.0 * st.nFull / decided)) + "%" : "–") + " · stops " + str.tostring(st.nLoss) + " · expired / scratch " + str.tostring(st.nExp)
         swCol = sweepLive ? okCol : st.swDir == 2 ? warnCol : dimCol
         modelCol = st.plState == 2 ? okCol : warnCol
         statusCol = st.plState == 2 ? okCol : st.plState == 4 and resultFresh ? bearCol : st.plState == 1 or str.startswith(statusTxt, "Waiting") ? warnCol : txtCol
@@ -2026,6 +2161,8 @@ if barstate.islast
             macroRow := 5
             if showStats
                 f_row(6, "Stats", statsTxt, dimCol)
+                if trackAll
+                    f_row(7, "Filtered", shadowTxt, dimCol)
         else if clLayout == "Minimal" or isMinLay
             f_row(1, "Entry Model", modelTxt, modelCol)
             f_row(2, "Status", statusTxt, statusCol)
@@ -2061,6 +2198,10 @@ if barstate.islast
                 table.cell(cl, 0, nextRow, statsTxt, text_color = dimCol, text_size = panelSize, text_halign = text.align_left)
                 table.cell(cl, 1, nextRow, "", text_size = panelSize)
                 table.merge_cells(cl, 0, nextRow, 1, nextRow)
+                if trackAll
+                    table.cell(cl, 0, nextRow + 1, shadowTxt, text_color = dimCol, text_size = panelSize, text_halign = text.align_left)
+                    table.cell(cl, 1, nextRow + 1, "", text_size = panelSize)
+                    table.merge_cells(cl, 0, nextRow + 1, 1, nextRow + 1)
         if macroRow > 0
             table.cell_set_bgcolor(cl, 0, macroRow, macroBg)
             table.cell_set_bgcolor(cl, 1, macroRow, macroBg)
