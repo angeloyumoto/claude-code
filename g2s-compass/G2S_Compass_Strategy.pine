@@ -116,9 +116,9 @@ vpOn       = input.bool(true, "Session Volume Profile", group = G6, tooltip = "D
 vpSesAL    = input.session("1800-0930", "Asia/London profile", group = G6)
 vpSesNY    = input.session("0930-1700", "New York profile", group = G6)
 vpPmRestart = input.bool(true, "Restart DEV for NY PM", inline = "pm", group = G6)
-vpSesPM    = input.session("1330-1700", "", inline = "pm", group = G6, tooltip = "Starts a fresh developing profile at the PM open; the morning profile keeps serving as OV until the day ends.")
-vpRows     = input.int(500, "Rows", minval = 10, maxval = 2000, step = 10, inline = "rv", group = G6)
-vpVaPct    = input.float(70, "Value area %", minval = 50, maxval = 95, step = 1, inline = "rv", group = G6, tooltip = "Rows: how finely the expected session range is sliced (more = finer VAH / POC / VAL). Value area: share of volume around the POC that defines VAH / VAL (70% is standard).")
+vpSesPM    = input.session("1330-1700", "", inline = "pm", group = G6, tooltip = "Starts a fresh developing profile at the PM open. As in the original, the overnight profile keeps serving as OV through the afternoon; the morning profile returns tomorrow as PD.")
+vpRows     = input.int(200, "Rows", minval = 10, maxval = 2000, step = 10, inline = "rv", group = G6)
+vpVaPct    = input.float(70, "Value area %", minval = 50, maxval = 95, step = 1, inline = "rv", group = G6, tooltip = "Rows: how finely the expected session range is sliced (more = finer VAH / POC / VAL). 200 ≈ 1.25-point rows on NQ; the histogram is drawn in at most 80 rows anyway, and every row costs loop time on every bar. Value area: share of volume around the POC that defines VAH / VAL (70% is standard).")
 showDev = input.bool(true, "Levels · DEV", inline = "vr", group = G6)
 showOv  = input.bool(true, "OV", inline = "vr", group = G6)
 showPd  = input.bool(true, "PD", inline = "vr", group = G6)
@@ -134,6 +134,7 @@ vpWidth    = input.int(40, "max width (bars)", minval = 5, maxval = 200, step = 
 vpUpCol    = input.color(color.new(#4caf50, 55), "Up volume", inline = "vc", group = G6)
 vpDnCol    = input.color(color.new(#2e7d32, 70), "Down volume", inline = "vc", group = G6)
 holdBars   = input.int(3, "VP Hold · confirmed closes", minval = 1, maxval = 10, group = G6, tooltip = "Consecutive closes on the far side of a crossed level needed for a 'VP Hold' entry (Value Rotation). A 'VP Retest' fires earlier when price wicks back to the level and closes beyond it.")
+holdMaxAtr = input.float(1.5, "VP Hold · max distance from level (ATR ×)", minval = 0.25, step = 0.25, group = G6, tooltip = "A 'VP Hold' entry only fires while the confirming close is within this distance of the crossed level, so a hold that has already run away from OV / PD value is not chased (its stop would be the ATR fallback anyway).")
 vpWindow   = input.int(60, "VP context valid for (bars)", minval = 10, group = G6, tooltip = "A level cross is forgotten after this many bars, or as soon as price closes 1 ATR back through the level.")
 devMinBars = input.int(20, "DEV eligible after (bars)", minval = 1, group = G6, tooltip = "The developing profile is too thin to trade until it has this many bars; until then its levels carry a * and OV is the reference for 'Inside / Above / Below value'.")
 
@@ -152,6 +153,15 @@ pendingBars = input.int(40, "Pending expires after (bars)", minval = 5, inline =
 planMaxBars = input.int(150, "active times out after", minval = 10, inline = "lf", group = G7, tooltip = "Pending: bars a retest plan waits for price to reach the entry. Active: bars an entered plan may run without reaching TP1 before it is marked expired.")
 resultBars  = input.int(10, "Show result for (bars)", minval = 1, group = G7)
 minGradeIn  = input.string("B", "Minimum grade to save", options = ["B", "A", "A+"], inline = "fl", group = G7)
+qualityFloor = input.string("External sweep or VP context", "Quality floor", options = ["Off", "External sweep or VP context", "External sweep"], group = G7, tooltip = "Which sweep context may become an idea. Off = any confirmed sweep, including the small internal pivots (③ length). External sweep or VP context = a session / PDH / PDL sweep, or a VP level cross in the idea's direction (VP-led ideas always pass). External sweep = only ideas backed by a live external sweep in their direction. In the Playbook view (no VP) the middle option equals External sweep.")
+htfBias     = input.string("Off", "HTF bias filter", options = ["Off", "15m+ FVG map", "Value location (OV / PD)", "Both"], group = G7, tooltip = "Refuse ideas against the higher-timeframe picture. 15m+ FVG map: the newest active mapped gap of 15m or higher sets the bias (none active = neutral). Value location: above the last completed value area (OV, else PD) = bull only, below = bear only, inside = neutral. Both: an idea must not oppose either. Reversal ideas often oppose the last 15m gap, so this trades frequency for alignment.")
+coolStop    = input.bool(true, "Cooldown · no re-entry on the same structure after a stop-out", group = G7, tooltip = "After a stop-out, no new idea in the same direction from the same sweep (same sweep bar) or the same VP level cross. A deeper / fresh sweep, a new level cross or an opposite-direction idea lifts it.")
+openQuietMin = input.int(5, "No ideas in the first (min) of a session", minval = 0, inline = "qt", group = G7)
+reviewQuiet  = input.int(15, "and (bars) after a two-sided sweep", minval = 0, inline = "qt", group = G7, tooltip = "Quiet periods: no plan is saved (and no NEW IDEA alert fires) this many minutes after a shown ② session opens, nor this many bars after a two-sided sweep, even when a one-sided sweep replaces the review at once. Sweeps, reactions and the panel keep updating; a retest after the quiet time still counts. 0 = off.")
+zoneMaxAge  = input.int(40, "Zone retest within (bars)", inline = "za", minval = 5, group = G7)
+minTradeGapAtr = input.float(0.5, "min gap to trade (ATR ×)", minval = 0, step = 0.05, inline = "za", group = G7, tooltip = "An IFVG must have inverted, and an FVG must have formed, within this many bars for its retest to count ('IFVG Close' is always fresh). FVG / IFVG entry models only use gaps at least this big; ④ still draws smaller ones (a thinner gap has no room for a structural stop). 0 = off.")
+atrMinTp1R  = input.float(1.5, "TP1 minimum when the stop is the ATR fallback (R)", minval = 0.5, step = 0.25, group = G7, tooltip = "When no structural stop is usable (missing, tighter than 0.25 ATR or wider than 'Max stop') the ATR stop replaces it and TP1 must pay at least this many R; nearer targets are dropped. 1.0 = same as the normal minimum.")
+needLiqTp   = input.bool(true, "Targets need a liquidity / VP level", group = G7, tooltip = "At least one target must be a VP level, an untaken session high / low, PDH / PDL or a pivot. A plan whose only draws are opposing FVG edges waits instead of saving.")
 tradeWindow = input.string("Any", "during", options = ["Any", "NY AM + PM", "NY AM only"], inline = "fl", group = G7, tooltip = "A = sweep + reaction AND VP alignment; A+ = A plus two confluences (HTF FVG, SMT, external sweep, stacked VP levels). In the Playbook view every idea is B, so A / A+ saves nothing. Ideas outside the window are not saved and do not alert.")
 showStats   = input.bool(true, "Stats row (ideas · win rate)", inline = "st", group = G7)
 markIdeas   = input.bool(true, "Mark past ideas", inline = "st", group = G7, tooltip = "Stats: ideas saved since the chart loaded; win % = reached TP1 among decided ideas; TP3 % = fully completed. Marks: a tiny tag beyond each past idea's stop with grade and outcome (✓ TP1, ✗ stopped, ○ expired); hover for entry / stop / targets.")
@@ -351,6 +361,8 @@ type Profile
     float  lo
     bool   done
     array<box> boxes
+    int    pocIdx       // row holding the most volume, maintained by f_acc so f_levels never rescans
+    float  pocVol
 
 type Piv
     float price
@@ -413,6 +425,9 @@ type State
     int    nLoss
     int    nFull
     int    nExp
+    int    coolDir
+    int    coolSwBar
+    int    coolVpBar
 
 // ───────────────────────────── Session liquidity ledger ─────────────────────────────
 f_newSes(string name, string abbr, string sess, color col, bool show, bool isPd) =>
@@ -571,7 +586,7 @@ var State st = State.new(swDir = 0, swName = "", swExternal = false, reactOK = f
 
 // ───────────────────────────── Volume Profile engine ─────────────────────────────
 f_newProfile(string kind, float rowSize) =>
-    Profile.new(kind = kind, startBar = bar_index, rowSize = rowSize, base = na, vol = array.new<float>(), upv = array.new<float>(), total = 0.0, hi = high, lo = low, done = false, boxes = array.new<box>())
+    Profile.new(kind = kind, startBar = bar_index, rowSize = rowSize, base = na, vol = array.new<float>(), upv = array.new<float>(), total = 0.0, hi = high, lo = low, done = false, boxes = array.new<box>(), pocIdx = 0, pocVol = 0.0)
 
 f_acc(Profile p) =>
     v = na(volume) or volume <= 0 ? 1.0 : volume
@@ -590,6 +605,7 @@ f_acc(Profile p) =>
             p.vol := array.concat(array.new<float>(k, 0.0), p.vol)
             p.upv := array.concat(array.new<float>(k, 0.0), p.upv)
             p.base := iLo
+            p.pocIdx += k
         topIdx = p.base + array.size(p.vol) - 1
         if iHi > topIdx
             k = iHi - topIdx
@@ -599,8 +615,13 @@ f_acc(Profile p) =>
         up = close >= open ? share : 0.0
         for j = iLo to iHi
             idx = j - p.base
-            array.set(p.vol, idx, array.get(p.vol, idx) + share)
+            nv = array.get(p.vol, idx) + share
+            array.set(p.vol, idx, nv)
             array.set(p.upv, idx, array.get(p.upv, idx) + up)
+            // volume only grows, so the POC can only move to a row this bar touched; lowest row wins ties
+            if nv > p.pocVol or (nv == p.pocVol and idx < p.pocIdx)
+                p.pocVol := nv
+                p.pocIdx := idx
         p.total += v
         p.hi := math.max(p.hi, high)
         p.lo := math.min(p.lo, low)
@@ -608,13 +629,8 @@ f_acc(Profile p) =>
 f_levels(Profile p) =>
     n = array.size(p.vol)
     if n > 0 and p.total > 0
-        pocIdx = 0
-        maxV = 0.0
-        for i = 0 to n - 1
-            v = array.get(p.vol, i)
-            if v > maxV
-                maxV := v
-                pocIdx := i
+        pocIdx = p.pocIdx
+        maxV = p.pocVol
         p.poc := (p.base + pocIdx + 0.5) * p.rowSize
         target = p.total * vpVaPct / 100
         acc = maxV
@@ -638,7 +654,7 @@ f_drawProfile(Profile p, int x1, int x2, bool fade) =>
     array.clear(p.boxes)
     n = array.size(p.vol)
     if useHist and n > 0 and p.total > 0
-        grp = math.max(1, math.ceil(n / 80.0))
+        grp = math.max(1, math.ceil(n / (vpHistMode == "Developing + 3 previous" ? 60.0 : 80.0)))
         gv = array.new<float>()
         gu = array.new<float>()
         i = 0
@@ -786,7 +802,10 @@ f_devEligible() =>
     r = false
     if not na(dev)
         if not na(dev.poc)
-            r := bar_index - dev.startBar >= devMinBars
+            // never demand more than a quarter of the session's bars, so DEV still becomes eligible on 5m / 15m charts
+            sesSec = dev.kind == "PM" ? 12600 : dev.kind == "NY" ? (vpPmRestart ? 14400 : 27000) : 55800
+            need = math.min(devMinBars, math.max(1, math.round(sesSec / chartSec / 4.0)))
+            r := bar_index - dev.startBar >= need
     r
 
 devEligible = f_devEligible()
@@ -844,7 +863,7 @@ if confirmed and useVp
             for lvl in vpLvls
                 L = f_levelVal(role, lvl)
                 // session-open bar: DEV is not eligible yet, OV carries the finished profile's previous values, PD / PW are static
-                Lp = newVpSession and (role == "PD" or role == "PW") ? L : array.get(vpPrevL, f_lvlIdx(role, lvl))
+                Lp = (newVpSession and (role == "PD" or role == "PW")) or (newWeek and role == "PW") ? L : array.get(vpPrevL, f_lvlIdx(role, lvl))
                 if not na(L) and not na(Lp) and (not newVpSession or role != "DEV")
                     up = close > L and close[1] <= math.min(L, Lp)
                     dn = close < L and close[1] >= math.max(L, Lp)
@@ -888,7 +907,7 @@ if confirmed and useVp
                     st.vpModel := "VP Retest"
                     st.vpModelBar := bar_index
                     st.vpModelExt := d == 1 ? low : high
-                else if st.holdCount >= holdBars
+                else if st.holdCount >= holdBars and math.abs(close - L) <= holdMaxAtr * atr
                     st.vpModel := "VP Hold"
                     st.vpModelBar := bar_index
                     st.vpModelExt := st.holdExt
@@ -898,6 +917,8 @@ if confirmed and useVp
 
 
 newDay = not na(pdTime) and (na(pdTime[1]) or pdTime != pdTime[1])
+var int sesOpenTime = na
+var int twoSidedBar = na
 
 sweepHiExt = false
 sweepLoExt = false
@@ -908,6 +929,8 @@ sweepLoLvl = float(na)
 
 if confirmed
     for [i, s] in sessions
+        if s.show and not s.isPd and array.get(inSesArr, i) and not s.active
+            sesOpenTime := time
         [a, b] = f_sesUpdate(s, array.get(inSesArr, i), newDay)
         if a and (na(sweepHiLvl) or s.hi > sweepHiLvl)
             sweepHiExt := true
@@ -950,6 +973,7 @@ if confirmed
     if twoSided
         st.swDir := 2
         st.swName := "Two-sided"
+        twoSidedBar := bar_index
         st.swBar := bar_index
         st.swExternal := sweepHiExt or sweepLoExt
         st.reactOK := false
@@ -1048,8 +1072,8 @@ f_smtDraw(int x1, float y1, int x2, float y2, string who, int dir) =>
 
 if confirmed and (smtOn1 or smtOn2)
     if not na(smtPh)
-        c1 = cmpT1[smtPiv] == time[smtPiv] ? cmpHi1 : float(na)
-        c2 = cmpT2[smtPiv] == time[smtPiv] ? cmpHi2 : float(na)
+        c1 = cmpT1[smtPiv] == time[smtPiv] and cmpT1[smtWin - 1] == time[smtWin - 1] ? cmpHi1 : float(na)
+        c2 = cmpT2[smtPiv] == time[smtPiv] and cmpT2[smtWin - 1] == time[smtWin - 1] ? cmpHi2 : float(na)
         pb = bar_index - smtPiv
         if not na(prevPh) and smtPh > prevPh
             d1 = smtOn1 and not na(c1) and not na(prevPhC1) and c1 < prevPhC1
@@ -1065,8 +1089,8 @@ if confirmed and (smtOn1 or smtOn2)
         prevPhC2 := c2
         prevPhBar := pb
     if not na(smtPl)
-        c1 = cmpT1[smtPiv] == time[smtPiv] ? cmpLo1 : float(na)
-        c2 = cmpT2[smtPiv] == time[smtPiv] ? cmpLo2 : float(na)
+        c1 = cmpT1[smtPiv] == time[smtPiv] and cmpT1[smtWin - 1] == time[smtWin - 1] ? cmpLo1 : float(na)
+        c2 = cmpT2[smtPiv] == time[smtPiv] and cmpT2[smtWin - 1] == time[smtWin - 1] ? cmpLo2 : float(na)
         pb = bar_index - smtPiv
         if not na(prevPl) and smtPl < prevPl
             d1 = smtOn1 and not na(c1) and not na(prevPlC1) and c1 > prevPlC1
@@ -1199,7 +1223,7 @@ f_htfProcess(array<Fvg> arr, array<int> opens, bool enabled, string tf, float h1
         if gapS > 0 and gapS >= minH and (not midClose or c2 < l3)
             f_fvgAdd(arr, l3, h1, -1, anchor, f_tfLabel(tf), true, maxHtf, rs)
 
-if confirmed and useFvg and (bar_index % 5 == 0 or barstate.islast)
+if useFvg and barstate.islast
     f_fvgTrail(fvgs)
     f_fvgTrail(htf1)
     f_fvgTrail(htf2)
@@ -1285,6 +1309,9 @@ f_planEnd(int state, string result) =>
         st.nWin += 1
     else if state == 4
         st.nLoss += 1
+        st.coolDir := st.plDir
+        st.coolSwBar := st.swBar
+        st.coolVpBar := st.vpBar
     else
         st.nExp += 1
     if state == 3
@@ -1351,7 +1378,7 @@ f_fvgFar(Fvg f, int d) =>
 f_pickFvgRetest(int d, int sinceBar) =>
     Fvg r = na
     for f in fvgs
-        if f.state == 0 and f.dir == d and not f.used and f.barIdx >= sinceBar and bar_index > f.barIdx + 1
+        if f.state == 0 and f.dir == d and not f.used and f.barIdx >= sinceBar and bar_index > f.barIdx + 1 and f.top - f.bottom >= minTradeGapAtr * atr
             hit = d == 1 ? (low <= f.top and close > f.top) : (high >= f.bottom and close < f.bottom)
             if hit
                 r := f
@@ -1360,7 +1387,7 @@ f_pickFvgRetest(int d, int sinceBar) =>
 f_pickIfvg(int d, bool wantClose, int sinceBar) =>
     Fvg r = na
     for f in fvgs
-        if f.state == 1 and f.dir == -d and not f.used and f.invBar >= sinceBar
+        if f.state == 1 and f.dir == -d and not f.used and f.invBar >= sinceBar and f.top - f.bottom >= minTradeGapAtr * atr
             if wantClose
                 if f.invBar == bar_index
                     r := f
@@ -1447,9 +1474,12 @@ f_pickTargets(int d, float entry, float R, array<float> pri, array<float> poolA,
     for p in poolA
         if f_tpOk(tps, entry, R, p)
             array.push(tps, p)
+    nLiq = array.size(tps)
     for p in poolB
         if f_tpOk(tps, entry, R, p)
             array.push(tps, p)
+    if nLiq == 0 and needLiqTp
+        array.clear(tps)
     if d == 1
         array.sort(tps, order.ascending)
     else
@@ -1496,13 +1526,46 @@ f_planDraw() =>
 f_gradeRank(string g) =>
     g == "A+" ? 3 : g == "A" ? 2 : 1
 
-windowOK = tradeWindow == "Any" or (tradeWindow == "NY AM + PM" and (array.get(inSesArr, 2) or array.get(inSesArr, 3))) or (tradeWindow == "NY AM only" and array.get(inSesArr, 2))
+// HTF bias: direction of the newest active 15m+ mapped gap, and / or price location against the last completed value area (OV, else PD).
+f_mapNewest(array<Fvg> arr, string tf, bool enabled, int d0, int b0) =>
+    dd = d0
+    bb = b0
+    if enabled and useHtf and timeframe.in_seconds(tf) >= 900
+        for f in arr
+            if f.state == 0 and f.barIdx > bb
+                bb := f.barIdx
+                dd := f.dir
+    [dd, bb]
+
+f_mapBias() =>
+    [d1, b1] = f_mapNewest(htf1, htfTf1, htfOn1, 0, -1)
+    [d2, b2] = f_mapNewest(htf2, htfTf2, htfOn2, d1, b1)
+    [d3, b3] = f_mapNewest(htf3, htfTf3, htfOn3, d2, b2)
+    [d4, b4] = f_mapNewest(htf4, htfTf4, htfOn4, d3, b3)
+    [d5, b5] = f_mapNewest(htf5, htfTf5, htfOn5, d4, b4)
+    [d6, b6] = f_mapNewest(htf6, htfTf6, htfOn6, d5, b5)
+    d6
+
+f_valueBias() =>
+    role = na(f_levelVal("OV", "VAH")) ? "PD" : "OV"
+    vh = f_levelVal(role, "VAH")
+    vl = f_levelVal(role, "VAL")
+    na(vh) ? 0 : close > vh ? 1 : close < vl ? -1 : 0
+
+f_biasOK(int d) =>
+    mapD = (htfBias == "15m+ FVG map" or htfBias == "Both") ? f_mapBias() : 0
+    valD = (htfBias == "Value location (OV / PD)" or htfBias == "Both") ? f_valueBias() : 0
+    (mapD == 0 or mapD == d) and (valD == 0 or valD == d)
+
+quietNow = (openQuietMin > 0 and not na(sesOpenTime) and time - sesOpenTime < openQuietMin * 60000) or (reviewQuiet > 0 and not na(twoSidedBar) and bar_index - twoSidedBar <= reviewQuiet)
+windowOK = (tradeWindow == "Any" or (tradeWindow == "NY AM + PM" and (array.get(inSesArr, 2) or array.get(inSesArr, 3))) or (tradeWindow == "NY AM only" and array.get(inSesArr, 2))) and not quietNow
 if drawPlanNow
     f_planDraw()
 
+cooled = coolStop and dirNow == nz(st.coolDir) and ((st.swDir == dirNow and st.swBar == nz(st.coolSwBar, -1)) or (st.vpDir == dirNow and st.vpBar == nz(st.coolVpBar, -1)))
 newPlan = false
 
-if confirmed and windowOK and st.plState != 1 and st.plState != 2 and st.swDir != 2 and (nz(st.plEndBar, -1) != bar_index or (st.plState == 4 and st.plDir != dirNow)) and (dirNow == 1 or dirNow == -1)
+if confirmed and windowOK and not cooled and st.plState != 1 and st.plState != 2 and st.swDir != 2 and (nz(st.plEndBar, -1) != bar_index or (st.plState == 4 and st.plDir != dirNow)) and (dirNow == 1 or dirNow == -1)
     d = dirNow
     string model = ""
     string led = ""
@@ -1515,9 +1578,9 @@ if confirmed and windowOK and st.plState != 1 and st.plState != 2 and st.swDir !
     paCtx = st.swDir == d and st.reactOK
     // Price-action models (need a sweep + reaction, or an aligned VP context)
     if paCtx or st.vpDir == d
-        f1 = f_pickIfvg(d, false, st.swBar)
+        f1 = f_pickIfvg(d, false, math.max(st.swBar, bar_index - zoneMaxAge))
         f2 = f_pickIfvg(d, true, st.swBar)
-        f3 = f_pickFvgRetest(d, ctxBar)
+        f3 = f_pickFvgRetest(d, math.max(ctxBar, bar_index - zoneMaxAge))
         if not na(f1) and paCtx
             model := "IFVG Retest"
             usedFvg := f1
@@ -1552,10 +1615,17 @@ if confirmed and windowOK and st.plState != 1 and st.plState != 2 and st.swDir !
         structStop := d == 1 ? math.min(st.vpModelExt, L0) : math.max(st.vpModelExt, L0)
         basis := st.vpRole + " " + st.vpLevel
         liveNow := true
+    if model != "" and not na(entry) and not f_biasOK(d)
+        st.lastNote := "Filtered · against HTF bias · " + htfBias
+        st.lastNoteBar := bar_index
+        if led == "VP-led"
+            f_vpReset()
+        model := ""
     if model != "" and not na(entry)
         buf = slBufTicks * tick
         sl = d == 1 ? structStop - buf : structStop + buf
-        if na(sl) or (d == 1 ? sl >= entry - tick : sl <= entry + tick) or math.abs(entry - sl) < 0.25 * atr or math.abs(entry - sl) > maxSlAtr * atr
+        atrStop = na(sl) or (d == 1 ? sl >= entry - tick : sl <= entry + tick) or math.abs(entry - sl) < 0.25 * atr or math.abs(entry - sl) > maxSlAtr * atr
+        if atrStop
             sl := d == 1 ? entry - slAtrMult * atr : entry + slAtrMult * atr
         R = math.abs(entry - sl)
         pri = array.new<float>()
@@ -1568,9 +1638,12 @@ if confirmed and windowOK and st.plState != 1 and st.plState != 2 and st.swDir !
                 array.push(pri, farL)
         [poolA, poolB] = f_candidates(d, entry)
         tps = f_pickTargets(d, entry, R, pri, poolA, poolB)
+        while atrStop and array.size(tps) > 0 and math.abs(array.get(tps, 0) - entry) < atrMinTp1R * R
+            array.shift(tps)
         gradeNow = f_grade(d, led, entry)
-        if f_gradeRank(gradeNow) < f_gradeRank(minGradeIn)
-            st.lastNote := "Filtered · grade " + gradeNow + " below " + minGradeIn
+        floorOK = qualityFloor == "Off" or (st.swDir == d and st.swExternal) or (qualityFloor == "External sweep or VP context" and st.vpDir == d)
+        if f_gradeRank(gradeNow) < f_gradeRank(minGradeIn) or not floorOK
+            st.lastNote := not floorOK ? "Filtered · quality floor" : "Filtered · grade " + gradeNow + " below " + minGradeIn
             st.lastNoteBar := bar_index
             if led == "VP-led"
                 f_vpReset()
@@ -1701,7 +1774,9 @@ f_sesDupLbl(Ses s, float p) =>
                     r := true
     r
 
-// Heavy redraw once per bar: on the confirmed (committed) update; on uncommitted ticks only until a committed draw exists after load.
+// Heavy redraw on the confirmed (committed) update of the last bar. During the first realtime bar after load it also runs on
+// every tick: `heavyDrawn` is a plain var, so it is rolled back to false before each tick until a committed draw exists, and
+// that is required – drawings made on an uncommitted tick are rolled back too, so a varip flag would leave the chart empty.
 var bool heavyDrawn = false
 heavyDraw = barstate.islast and (confirmed or not heavyDrawn)
 if heavyDraw

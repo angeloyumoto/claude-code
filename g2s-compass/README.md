@@ -38,7 +38,7 @@ Alerts are timeframe-specific, so create one per chart timeframe you want monito
 | FVGs (chart TF) | Shaded boxes labelled `1m` (or `1m FVG`), ending a few bars past the last candle. Gaps from earlier sessions are hidden until price comes within 1 ATR. A confirmed close through the far edge under sweep + reaction ownership turns the box purple and relabels it `IFVG`; without ownership the gap simply ends. |
 | HTF FVG map | Six slots (default 3m · 5m · 15m · 1H · 4H, Daily off), drawn like the chart gaps with the source-timeframe label, minimum size 10 points by default, hidden until price is within 3 ATR. Placement *Price Action* (default, as in the original's screenshots) or *Right Side* (parked right of live price on 1m/3m/5m). With *Promote linked LTF FVGs* (Auto = on in Mobile Compact / Minimal) a chart-TF, 3m or 5m gap covered by a same-direction gap of the next ladder step is hidden. |
 | SMT | Black connector between the two primary pivots plus a centred `ES SMT` / `ES/YM SMT` label. The comparison symbol's swing over the same pivot window is used, and bars the comparison does not have are ignored. |
-| Volume Profile | Session profiles: **DEV** (developing), **OV** (previous session), **PD** (same session type, previous day), **PW** (previous week, levels only). Sessions: Asia/London 18:00–09:29, New York 09:30–13:29 and a NY PM restart 13:30–16:59 (switchable off, then NY runs to 16:59). Histogram for DEV (never painted past the last bar) plus the last 1–3 completed sessions; VAH / POC / VAL lines, DEV labels at the right end, OV/PD/PW labels at the start, caption `DEV - New York VP [live]`. |
+| Volume Profile | Session profiles: **DEV** (developing), **OV** (previous session), **PD** (same session type, previous day), **PW** (previous week, levels only). Sessions: Asia/London 18:00–09:29, New York 09:30–13:29 and a NY PM restart 13:30–16:59 (switchable off, then NY runs to 16:59). During the PM profile the overnight profile stays OV, as in the original; the morning profile returns the next day as PD. DEV becomes eligible after 20 bars or a quarter of the session, whichever is less. Histogram for DEV (never painted past the last bar) plus the last 1–3 completed sessions; VAH / POC / VAL lines, DEV labels at the right end, OV/PD/PW labels at the start, caption `DEV - New York VP [live]`. |
 | Trade plan | One plan at a time, drawn only once it is ACTIVE: entry line labelled `B · Rotation VP Hold`, red dotted SL, grey dotted TP1–TP3 (ticked when hit). Drawings are removed at once on a stop hit, invalidation or timeout, and shortly after completion. |
 | Checklist panel | Header `G2S · Bull · Grade B`, then Setup Type · Entry Model · Liquidity Sweep · Price Reaction · HTF FVG (opt.) · SMT (opt.) · VP Context · Status · Macro Window · Stats (ideas, TP1 win rate, TP3 rate, stops, expired). |
 | Liquidity panel | `G2S Liquidity` table with High/Low check marks per range; prices and taken-time in tooltips. |
@@ -78,14 +78,25 @@ FVG entries use the near boundary by default (switchable to 50%, far edge, or co
 
 **Plan lifecycle.** SL hit → *Setup Invalid* (the sweep thesis stays alive, so a fresh FVG can produce another plan). TP3 (or the last available target) hit → *Complete*. An ACTIVE plan that reaches no target within `Active plan times out after` bars ends as *Stale*. The result stays in the panel for `Show plan result for` bars, then the live scanning state is shown again. Only one plan is drawn at a time, a new plan is never saved on the bar the previous one ended (except an opposite-direction idea on the bar a plan was stopped, which is the reversal itself), and a spent VP rotation must be re-earned with a fresh cross. Pending plans (reference not yet reached) show *Waiting for … entry* and draw nothing.
 
-**Selectivity.** `Minimum grade to save a plan` (B / A / A+) and `Only save plans during` (Any / NY AM + PM / NY AM only) filter which ideas become plans. Fewer, better-aligned ideas is the usual effect; measure it before trusting it.
+**Selectivity.** These gates decide which qualified models become saved ideas (and alerts). Defaults are conservative; every one is an input under Trade plan:
+
+* `Quality floor` (default *External sweep or VP context*): an idea needs a session / PDH / PDL sweep in its direction, or a VP level cross in that direction. Internal-pivot-only sweeps no longer make ideas unless you set it to *Off*.
+* `Minimum grade to save` (B / A / A+) and `during` (Any / NY AM + PM / NY AM only).
+* `HTF bias filter` (default *Off*): refuse ideas against the newest active 15m+ mapped gap and/or against price location relative to the last completed value area.
+* `Cooldown`: after a stop-out, no same-direction idea from the same sweep or the same VP cross.
+* Quiet periods: no ideas in the first 5 minutes of a shown session, nor for 15 bars after a two-sided sweep.
+* `Zone retest within` 40 bars and `min gap to trade` 0.5 ATR: late retests and thin gaps are drawn but not traded.
+* `VP Hold · max distance from level` 1.5 ATR: a hold that already ran away from value is not chased.
+* `TP1 minimum when the stop is the ATR fallback` 1.5R and `Targets need a liquidity / VP level`.
+
+Fewer, better-aligned ideas is the usual effect; measure it with the Stats row and the strategy build before trusting it.
 
 ## Settings worth knowing
 
 * **G2S View** – Compass · Complete / Playbook · Price Action (no VP) / Value · Volume Profile (no checklist, FVG or SMT) / Minimal · Clean Chart.
 * **Checklist** – Full (adds the six questions and TP rows) / Compact (default) / Minimal / Mobile (single combined table with *Liq Left*) / Off; location Auto or any corner. Every non-obvious input has a tooltip.
 * **Sessions** – every session string is editable, in New York time. VP sessions default to Asia/London 18:00–09:29 and New York 09:30–16:59.
-* **Volume Profile** – target rows (500 by default; actual rows are tick-aligned so the count varies), value-area %, histogram mode, Left/Right placement (Right = next to live price / right-aligned at session end), width in bars (scaled down automatically on higher timeframes), per-level colours, NY PM restart, DEV eligibility delay in bars. DEV levels are drawn from the first bar and carry a `*` until eligible.
+* **Volume Profile** – target rows (200 by default; actual rows are tick-aligned so the count varies), value-area %, histogram mode, Left/Right placement (Right = next to live price / right-aligned at session end), width in bars (scaled down automatically on higher timeframes), per-level colours, NY PM restart, DEV eligibility delay in bars. DEV levels are drawn from the first bar and carry a `*` until eligible.
 * **FVGs** – middle-close filter, minimum size in points or ATR fraction, label mode (`1m` or `1m FVG`), six HTF slots with their own 10-point minimum, placement and right-side offset/width, `Show older gaps within (ATR ×)`, linked-FVG promotion (Auto/On/Off).
 * **Trade plan** – FVG entry reference, stop reference, buffer, ATR fallback, max stop and target distance, TP1 minimum and spacing, pending expiry, active timeout, result window, stats row, minimum grade, trading window.
 
