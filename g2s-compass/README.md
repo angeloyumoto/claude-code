@@ -81,7 +81,10 @@ FVG entries use the near boundary by default (switchable to 50%, far edge, or co
 **Selectivity.** These gates decide which qualified models become saved ideas (and alerts). Defaults are conservative; every one is an input under Trade plan:
 
 * `Quality floor` (default *External sweep (VP-led ideas pass)*): a price-action idea needs a session / PDH / PDL sweep in its direction; VP Hold / VP Retest ideas pass on their own. *External sweep or VP context* is looser, *Off* allows internal-pivot sweeps too.
-* `Minimum grade to save` (default **A**: only complete setups with VP alignment are saved and alerted; the Playbook view has no VP, so there the floor is B) and `during` (default **NY AM + PM**; Any / NY AM only).
+* `Minimum grade to save` (default **A**: only complete setups with VP alignment are saved and alerted; the Playbook view has no VP, so there the floor is B) and `during` (default **Killzones**, 09:30–11:00 and 13:30–16:00 New York, both editable; Any / NY AM + PM / NY AM only).
+* `Require an HTF FVG or SMT confluence` (default on): checklist steps 2 and 3 are optional in the checklist, but an idea is only saved when the sweep or the entry touched a mapped 15m+ gap in its direction, or a fresh SMT points the same way. The grade is unchanged; this is a gate.
+* `Displacement leg ≥ ATR ×` (default 2): from the sweep extreme to the farthest print since; no entry until the reversal has actually travelled.
+* `Retest must not fill the whole gap` (default on): a retest whose wick trades through the far edge of the zone does not count.
 * `Require a market structure shift` (default on, 10-bar lookback): no FVG / IFVG entry before price closes beyond the short-term high / low that preceded the sweep.
 * `Ideas per session` (default 1, `A+ may add one`): the checklist's "only trade 1 setup per session unless another A+ appears". A session is a Volume Profile session (AL / NY / PM restart); 0 = unlimited.
 * `HTF bias filter` (default *15m+ FVG map*): refuse ideas against the newest active 15m+ mapped gap, and/or against price location relative to the last completed value area. Set to *Off* to allow counter-trend ideas.
@@ -93,7 +96,7 @@ FVG entries use the near boundary by default (switchable to 50%, far edge, or co
 
 Fewer, better-aligned ideas is the usual effect; measure it with the Stats row and the strategy build before trusting it.
 
-**Shadow ideas (past setups stay visible).** With `Track filtered setups too` (default on) every complete candidate the gates refuse (grade below the floor, over the session cap, quality floor, HTF bias, outside the window, cooldown, or while a plan is live) is followed through the same lifecycle as a saved plan, without drawings, alerts or session counting. When it ends it gets the same tag as a saved idea (`B L ✓`, `A S ✗`, `○` expired or scratch) drawn faint beyond its original stop, and the hover text says why it was filtered. One shadow runs at a time and the same zone or level is not followed twice. The panel shows two stats lines: `Saved · …` for the ideas the floor kept and `Filtered · …` for the shadows, so the effect of the gates can be read directly. Tags (saved and shadow, up to 200) stay on the chart for `Keep idea tags for (days)` (default 3) at the chosen `tag size`.
+**Shadow ideas (past setups stay visible).** With `Shadow ideas` at *Same grade or better* (default) every complete candidate at or above the minimum grade that the other gates refuse (session cap, confluence, HTF bias, outside the window, cooldown, or while a plan is live) is followed through the same lifecycle as a saved plan, without drawings, alerts or session counting; *All grades* follows B setups too, *Off* tags saved ideas only. When it ends it gets the same tag as a saved idea (`B L ✓`, `A S ✗`, `○` expired or scratch) drawn faint beyond its original stop, and the hover text says why it was filtered. One shadow runs at a time and the same zone or level is not followed twice. The panel shows two stats lines: `Saved · …` for the ideas the floor kept and `Filtered · …` for the shadows, so the effect of the gates can be read directly. Tags (saved and shadow, up to 200) stay on the chart for `Keep idea tags for (days)` (default 3) at the chosen `tag size`.
 
 ## Settings worth knowing
 
@@ -118,10 +121,10 @@ Use the grade and session filters, the stop cap and the timeframe to tune select
 A review of the engine against the G2S checklist (IFVG model and Continuation model) and the public ICT material found five reasons the earlier builds produced more stop-outs than TP1 hits on a 1m NQ chart, and each has a fix that is now the default:
 
 1. **The stop sat at the displacement candle's extreme** (*Latest High/Low*). On a 1m chart the normal 50–70 % retrace of the displacement leg, which the checklist itself expects ("confirm entry at 0.50–0.705 retrace"), runs through that level. The stop now sits beyond the **sweep wick** (then a protected pivot, then the zone's far edge), where the thesis really fails.
-2. **A four-tick buffer** was tagged by ordinary retest spikes. The buffer is now the larger of 4 ticks and 0.1 ATR.
+2. **A four-tick buffer** was tagged by ordinary retest spikes and by the second, slightly deeper sweep of the same low. The buffer is now the larger of 4 ticks and 0.25 ATR.
 3. **The ATR fallback invented stops** that no structure protected whenever the structural stop was too tight or too wide. Those ideas are now skipped.
 4. **IFVG Close entered at the inversion candle's close**, the worst price of the move, and the retest of the zone took the stop. The inversion now arms a pending plan at the IFVG and waits for the retest; pending plans fill only on a close back beyond the entry.
-5. **B-grade ideas and all sessions were allowed.** The defaults are now grade A, NY AM + PM, a required market structure shift, one idea per session (A+ may add one) and breakeven after TP1, as the checklist prescribes.
+5. **B-grade ideas and all sessions were allowed.** The defaults are now grade A, the two killzones, a required market structure shift, a displacement leg of at least 2 ATR, retests that do not fill the whole gap, an HTF FVG or SMT confluence, one idea per session (A+ may add one) and breakeven after TP1.
 
 None of this guarantees a win rate. Reload the chart and read the Stats row, then the Strategy Tester, before trusting the new mix.
 
