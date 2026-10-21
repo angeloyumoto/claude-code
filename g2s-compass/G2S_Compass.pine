@@ -73,12 +73,14 @@ midClose     = input.bool(true, "Middle-close filter", group = G4, tooltip = "Ke
 minFvgPts    = input.float(0.0, "Min size · points", minval = 0, inline = "mn", group = G4)
 minFvgAtr    = input.float(0.25, "ATR ×", minval = 0, step = 0.05, inline = "mn", group = G4, tooltip = "A gap must be at least the LARGER of the two. 0 points = ATR rule only.")
 maxFvg       = input.int(40, "Max stored FVGs", minval = 5, maxval = 60, group = G4, tooltip = "Beyond this the oldest gaps (dead ones first) are dropped. Lower it for a quieter chart.")
-fvgLblMode   = input.string("Timeframe only", "Box text", options = ["{tf} FVG", "Timeframe only"], group = G4)
+fvgLblMode   = input.string("Timeframe only", "Box text", options = ["{tf} FVG", "Timeframe only"], inline = "bt", group = G4)
+fvgTextSize  = input.string("Small", "size", options = ["Tiny", "Small", "Normal"], inline = "bt", group = G4)
+ltfShowBars  = input.int(20, "Keep small-TF gaps visible for (bars)", minval = 5, group = G4, tooltip = "Chart-timeframe and 3m / 5m gaps are drawn only while they matter: formed inside the current trade idea, used by the live plan, inverted under the live sweep, or younger than this many bars. Everything else is hidden; a gap that served a past idea stays as a short block. 15m-and-higher gaps keep their long blocks (dimmed when price is far).")
 fvgBullCol   = input.color(color.new(#26a69a, 80), "Bull", inline = "fc", group = G4)
 fvgBearCol   = input.color(color.new(#ef5350, 80), "Bear", inline = "fc", group = G4)
 ifvgCol      = input.color(color.new(#9c27b0, 85), "IFVG", inline = "fc", group = G4)
 nearAtr      = input.float(1.0, "Show older gaps within (ATR ×)", minval = 0.1, step = 0.25, group = G4, tooltip = "Gaps from earlier sessions stay invisible until price comes this close (3× this for mapped HTF gaps). Lower = cleaner chart.")
-promoteIn    = input.string("Auto", "Hide gaps covered by a bigger gap", options = ["Auto", "On", "Off"], group = G4, tooltip = "On 1m / 3m / 5m charts a gap lying inside an active same-direction gap of the next slot (3m → 5m → 15m) is hidden so only the bigger zone shows. Auto = on for the Minimal / Mobile checklist and the Minimal view.")
+promoteIn    = input.string("On", "Hide gaps covered by a bigger gap", options = ["Auto", "On", "Off"], group = G4, tooltip = "On 1m / 3m / 5m charts a gap lying inside an active same-direction gap of the next slot (3m → 5m → 15m) is hidden so only the bigger zone shows. Auto = on for the Minimal / Mobile checklist and the Minimal view.")
 
 // ───────────────────────────── ⑤ HTF FVG map ─────────────────────────────
 const string G4B = "⑤ HTF FVG map"
@@ -142,7 +144,7 @@ devMinBars = input.int(20, "DEV eligible after (bars)", minval = 1, group = G6, 
 const string G7 = "⑧ Trade plan"
 showPlan    = input.bool(true, "Draw Entry / SL / TP", group = G7, tooltip = "Lines and labels for the saved idea, extended 17 bars past price while it is live; a completed plan is frozen for 'Show result for' bars. Detection, grading and the NEW IDEA alert run regardless.")
 entryRefIn  = input.string("Near Edge", "FVG entry reference", options = ["Near Edge", "50%", "Far Edge", "Confirmation Close"], group = G7, tooltip = "Where a retest plan enters inside the FVG / IFVG. Near Edge = the edge price reaches first (original default). Confirmation Close = the current close, so the plan is live at once instead of pending.")
-stopRefIn   = input.string("FVG far edge", "Stop reference (FVG models)", options = ["FVG far edge", "Trade Idea High/Low", "Latest High/Low", "Internal High/Low", "ATR Stop"], group = G7, tooltip = "Structural stop for FVG / IFVG models (VP models always use the hold / retest extreme or the level).\nFVG far edge: opposite edge of the zone.\nTrade Idea High/Low: the sweep extreme.\nLatest High/Low: the displacement candle extreme.\nInternal High/Low: nearest protected pivot.\nATR Stop: ATR fallback only.")
+stopRefIn   = input.string("Latest High/Low", "Stop reference (FVG models)", options = ["FVG far edge", "Trade Idea High/Low", "Latest High/Low", "Internal High/Low", "ATR Stop"], group = G7, tooltip = "Structural stop for FVG / IFVG models (VP models always use the hold / retest extreme or the level).\nFVG far edge: opposite edge of the zone.\nTrade Idea High/Low: the sweep extreme.\nLatest High/Low: the displacement candle extreme.\nInternal High/Low: nearest protected pivot.\nATR Stop: ATR fallback only.")
 slBufTicks  = input.int(4, "Stop buffer (ticks)", minval = 0, inline = "sl", group = G7)
 slAtrMult   = input.float(1.0, "ATR fallback ×", minval = 0.2, step = 0.1, inline = "sl", group = G7, tooltip = "The buffer is added beyond the structural stop. The ATR stop (× ATR 14) replaces it when the structure is missing, tighter than 0.25 ATR or farther than 'Max stop'.")
 maxSlAtr    = input.float(3.0, "Max stop (ATR ×)", minval = 0.5, step = 0.5, inline = "mx", group = G7)
@@ -153,8 +155,8 @@ pendingBars = input.int(40, "Pending expires after (bars)", minval = 5, inline =
 planMaxBars = input.int(150, "active times out after", minval = 10, inline = "lf", group = G7, tooltip = "Pending: bars a retest plan waits for price to reach the entry. Active: bars an entered plan may run without reaching TP1 before it is marked expired.")
 resultBars  = input.int(10, "Show result for (bars)", minval = 1, group = G7)
 minGradeIn  = input.string("B", "Minimum grade to save", options = ["B", "A", "A+"], inline = "fl", group = G7)
-qualityFloor = input.string("External sweep or VP context", "Quality floor", options = ["Off", "External sweep or VP context", "External sweep"], group = G7, tooltip = "Which sweep context may become an idea. Off = any confirmed sweep, including the small internal pivots (③ length). External sweep or VP context = a session / PDH / PDL sweep, or a VP level cross in the idea's direction (VP-led ideas always pass). External sweep = only ideas backed by a live external sweep in their direction. In the Playbook view (no VP) the middle option equals External sweep.")
-htfBias     = input.string("Off", "HTF bias filter", options = ["Off", "15m+ FVG map", "Value location (OV / PD)", "Both"], group = G7, tooltip = "Refuse ideas against the higher-timeframe picture. 15m+ FVG map: the newest active mapped gap of 15m or higher sets the bias (none active = neutral). Value location: above the last completed value area (OV, else PD) = bull only, below = bear only, inside = neutral. Both: an idea must not oppose either. Reversal ideas often oppose the last 15m gap, so this trades frequency for alignment.")
+qualityFloor = input.string("External sweep (VP-led ideas pass)", "Quality floor", options = ["Off", "External sweep or VP context", "External sweep (VP-led ideas pass)", "External sweep"], group = G7, tooltip = "Which context may become an idea. Off = any confirmed sweep, including the small internal pivots (③ length). External sweep or VP context = a session / PDH / PDL sweep, or any VP level cross in the idea's direction. External sweep (VP-led ideas pass) = price-action ideas need a live session / PDH / PDL sweep in their direction; VP Hold / VP Retest ideas pass on their own. External sweep = every idea needs the external sweep.")
+htfBias     = input.string("15m+ FVG map", "HTF bias filter", options = ["Off", "15m+ FVG map", "Value location (OV / PD)", "Both"], group = G7, tooltip = "Refuse ideas against the higher-timeframe picture. 15m+ FVG map: the newest active mapped gap of 15m or higher sets the bias (none active = neutral). Value location: above the last completed value area (OV, else PD) = bull only, below = bear only, inside = neutral. Both: an idea must not oppose either. Reversal ideas often oppose the last 15m gap, so this trades frequency for alignment.")
 coolStop    = input.bool(true, "Cooldown · no re-entry on the same structure after a stop-out", group = G7, tooltip = "After a stop-out, no new idea in the same direction from the same sweep (same sweep bar) or the same VP level cross. A deeper / fresh sweep, a new level cross or an opposite-direction idea lifts it.")
 openQuietMin = input.int(5, "No ideas in the first (min) of a session", minval = 0, inline = "qt", group = G7)
 reviewQuiet  = input.int(15, "and (bars) after a two-sided sweep", minval = 0, inline = "qt", group = G7, tooltip = "Quiet periods: no plan is saved (and no NEW IDEA alert fires) this many minutes after a shown ② session opens, nor this many bars after a two-sided sweep, even when a one-sided sweep replaces the review at once. Sweeps, reactions and the panel keep updating; a retest after the quiet time still counts. 0 = off.")
@@ -194,6 +196,7 @@ useVpLabels  = vpLabels and not isMinLay
 panelSize = panelSizeIn == "Tiny" ? size.tiny : panelSizeIn == "Normal" ? size.normal : size.small
 planSize  = planSizeIn == "Small" ? size.small : planSizeIn == "Large" ? size.large : size.normal
 planSubSize = planSizeIn == "Small" ? size.tiny : planSizeIn == "Large" ? size.normal : size.small
+fvgTxtSz  = fvgTextSize == "Tiny" ? size.tiny : fvgTextSize == "Normal" ? size.normal : size.small
 
 f_pos(string s) =>
     s == "Top Left" ? position.top_left : s == "Bottom Right" ? position.bottom_right : s == "Bottom Left" ? position.bottom_left : position.top_right
@@ -344,6 +347,7 @@ type Fvg
     bool   rightSide
     bool   used
     int    ses          // VP session counter when the gap formed (older-session gaps are dimmed until price returns)
+    bool   traded       // a plan was saved from this gap (kept visible as a short block for review)
 
 type Profile
     string kind
@@ -1066,7 +1070,7 @@ f_smtDraw(int x1, float y1, int x2, float y2, string who, int dir) =>
     if useSmt
         array.push(smtLines, line.new(x1, y1, x2, y2, color = chart.fg_color, width = 2))
         array.push(smtLabels, label.new(int((x1 + x2) / 2), (y1 + y2) / 2, who + " SMT", style = label.style_none, textcolor = chart.fg_color, size = size.small, tooltip = (dir == 1 ? "Bullish" : "Bearish") + " SMT · " + who))
-        while array.size(smtLines) > 20
+        while array.size(smtLines) > 8
             line.delete(array.shift(smtLines))
             label.delete(array.shift(smtLabels))
 
@@ -1133,11 +1137,11 @@ f_fvgAdd(array<Fvg> arr, float top, float bottom, int dir, int barIdx, string tf
         line.delete(old.ce)
     dirCol = dir == 1 ? bullCol : bearCol
     bg = dir == 1 ? fvgBullCol : fvgBearCol
-    bx = box.new(barIdx, top, bar_index + 4, bottom, border_color = color.new(bg, 100), border_width = 1, bgcolor = bg, extend = extend.none, text = tfLbl + (fvgLblMode == "{tf} FVG" ? " FVG" : ""), text_size = size.tiny, text_color = color.new(dirCol, 15), text_halign = text.align_right, text_valign = text.align_center)
+    bx = box.new(barIdx, top, bar_index + 4, bottom, border_color = color.new(bg, 100), border_width = 1, bgcolor = bg, extend = extend.none, text = tfLbl + (fvgLblMode == "{tf} FVG" ? " FVG" : ""), text_size = fvgTxtSz, text_color = color.new(dirCol, 15), text_halign = text.align_right, text_valign = text.align_center)
     line ce = na
     if showCe
         ce := line.new(barIdx, (top + bottom) / 2, bar_index + 4, (top + bottom) / 2, color = color.new(dirCol, 50), style = line.style_dotted, extend = extend.none)
-    array.push(arr, Fvg.new(bx, ce, top, bottom, dir, barIdx, 0, na, tfLbl, rightSide, false, fvgSes))
+    array.push(arr, Fvg.new(bx, ce, top, bottom, dir, barIdx, 0, na, tfLbl, rightSide, false, fvgSes, false))
 
 f_fvgFreeze(Fvg f) =>
     if f.rightSide
@@ -1150,13 +1154,6 @@ f_fvgFreeze(Fvg f) =>
             line.set_x2(f.ce, bar_index)
 
 // Live gaps end a few bars past price (like the original) instead of running to the chart edge.
-f_fvgTrail(array<Fvg> arr) =>
-    for f in arr
-        if f.state != 2 and not f.rightSide
-            box.set_right(f.bx, bar_index + 4)
-            if not na(f.ce)
-                line.set_x2(f.ce, bar_index + 4)
-
 // Close-through invalidation. Chart-TF gaps invert into IFVGs; HTF gaps simply end.
 f_fvgUpdate(array<Fvg> arr, bool isHtf, float px) =>
     i = array.size(arr) - 1
@@ -1223,15 +1220,6 @@ f_htfProcess(array<Fvg> arr, array<int> opens, bool enabled, string tf, float h1
         if gapS > 0 and gapS >= minH and (not midClose or c2 < l3)
             f_fvgAdd(arr, l3, h1, -1, anchor, f_tfLabel(tf), true, maxHtf, rs)
 
-if useFvg and barstate.islast
-    f_fvgTrail(fvgs)
-    f_fvgTrail(htf1)
-    f_fvgTrail(htf2)
-    f_fvgTrail(htf3)
-    f_fvgTrail(htf4)
-    f_fvgTrail(htf5)
-    f_fvgTrail(htf6)
-
 f_htfProcess(htf1, htfOpen1, htfOn1, htfTf1, h1a, l1a, c1a, h2a, l2a, c2a, h3a, l3a, t1a)
 f_htfProcess(htf2, htfOpen2, htfOn2, htfTf2, h1b, l1b, c1b, h2b, l2b, c2b, h3b, l3b, t1b)
 f_htfProcess(htf3, htfOpen3, htfOn3, htfTf3, h1c, l1c, c1c, h2c, l2c, c2c, h3c, l3c, t1c)
@@ -1293,7 +1281,7 @@ var array<label> ideaMarks = array.new<label>()
 f_markIdea(int state) =>
     if useIdeaMk
         win = st.plHit >= 1
-        txt = st.plGrade + " " + (win ? "✓" : state == 4 ? "✗" : "○")
+        txt = st.plGrade + (st.plDir == 1 ? " L " : " S ") + (win ? "✓" : state == 4 ? "✗" : "○")
         c = win ? bullCol : state == 4 ? bearCol : color.gray
         tip = st.plFamily + " · " + st.plModel + " (" + st.plLed + ")\nEntry " + f_price(st.plEntry) + " · SL " + f_price(st.plSl) + " · R " + f_price(math.abs(st.plEntry - st.plSl)) + "\nTargets hit: " + str.tostring(st.plHit) + "/" + str.tostring(array.size(st.plTps)) + "\n" + st.lastResult
         array.push(ideaMarks, label.new(st.plBar, st.plSl, txt, style = st.plDir == 1 ? label.style_label_up : label.style_label_down, color = color.new(c, 20), textcolor = color.white, size = size.tiny, tooltip = tip))
@@ -1517,7 +1505,7 @@ f_planDraw() =>
         grey = color.new(chart.fg_color, 45)
         x2 = bar_index + 17
         st.lnEntry := line.new(st.plBar, st.plEntry, x2, st.plEntry, color = c, width = 2)
-        st.lbEntry := label.new(x2, st.plEntry, st.plGrade + " · " + f_familyShort(st.plFamily) + " " + st.plModel, style = label.style_label_left, color = color.new(color.white, 100), textcolor = c, size = planSize, tooltip = "Entry " + f_price(st.plEntry) + " · " + st.plLed)
+        st.lbEntry := label.new(x2, st.plEntry, st.plGrade + " · " + (st.plDir == 1 ? "LONG" : "SHORT") + " · " + f_familyShort(st.plFamily) + " " + st.plModel, style = label.style_label_left, color = color.new(color.white, 100), textcolor = c, size = planSize, tooltip = "Entry " + f_price(st.plEntry) + " · " + st.plLed)
         slCol = color.new(bearCol, 15)
         st.lnSl := line.new(st.plBar, st.plSl, x2, st.plSl, color = slCol, style = line.style_dotted)
         st.lbSl := label.new(x2, st.plSl, "SL", style = label.style_label_left, color = color.new(color.white, 100), textcolor = slCol, size = planSubSize, tooltip = "Stop " + f_price(st.plSl))
@@ -1643,7 +1631,7 @@ if confirmed and windowOK and not cooled and st.plState != 1 and st.plState != 2
         while atrStop and array.size(tps) > 0 and math.abs(array.get(tps, 0) - entry) < atrMinTp1R * R
             array.shift(tps)
         gradeNow = f_grade(d, led, entry)
-        floorOK = qualityFloor == "Off" or (st.swDir == d and st.swExternal) or (qualityFloor == "External sweep or VP context" and st.vpDir == d)
+        floorOK = qualityFloor == "Off" or (st.swDir == d and st.swExternal) or (qualityFloor == "External sweep or VP context" and st.vpDir == d) or (qualityFloor == "External sweep (VP-led ideas pass)" and led == "VP-led")
         if f_gradeRank(gradeNow) < f_gradeRank(minGradeIn) or not floorOK
             st.lastNote := not floorOK ? "Filtered · quality floor" : "Filtered · grade " + gradeNow + " below " + minGradeIn
             st.lastNoteBar := bar_index
@@ -1671,6 +1659,7 @@ if confirmed and windowOK and not cooled and st.plState != 1 and st.plState != 2
             st.plFvg := usedFvg
             if not na(usedFvg)
                 usedFvg.used := model != "IFVG Close"   // the inverted zone stays available for a later IFVG Retest
+                usedFvg.traded := true
             if led == "VP-led"
                 st.vpModel := ""
                 st.holdCount := 0
@@ -1750,17 +1739,41 @@ f_coveredBy(Fvg f, array<Fvg> higher) =>
             r := true
     r
 
-f_promote(array<Fvg> lower, array<Fvg> higher, bool on, float nearMult) =>
-    for f in lower
+f_isPlanGap(Fvg f) =>
+    r = false
+    if not na(st.plFvg)
+        r := st.plFvg.barIdx == f.barIdx and st.plFvg.tf == f.tf
+    r
+
+// Visibility pass (last bar). Small-timeframe gaps (chart TF, 3m, 5m) are shown only while they matter and trail price
+// only then; gaps that served a past idea stay as short blocks; everything else is hidden. 15m+ gaps keep long blocks,
+// dimmed when price is far. 'on' hides a gap covered by an active same-direction gap of the next ladder slot.
+f_gapVis(array<Fvg> arr, array<Fvg> higher, bool on, bool ltf, float nearMult) =>
+    plLive = st.plState == 1 or st.plState == 2
+    swLive = st.swDir == 1 or st.swDir == -1
+    for f in arr
         if f.state != 2
             band = atr * nearMult
             near = low <= f.top + band and high >= f.bottom - band
-            hide = (f.state == 0 and on and f_coveredBy(f, higher)) or (f.ses != fvgSes and not near)
+            covered = f.state == 0 and on and f_coveredBy(f, higher)
+            planGap = plLive and f_isPlanGap(f)
+            inIdea = dirNow != 0 and ((f.state == 0 and f.dir == dirNow and f.barIdx >= ctxBar) or (f.state == 1 and f.dir == -dirNow and swLive and f.invBar >= st.swBar))
+            young = bar_index - f.barIdx <= ltfShowBars
+            live = not ltf or planGap or inIdea or young
+            show = not covered and (ltf ? (live or f.traded) : (f.ses == fvgSes or near))
+            if not f.rightSide
+                xr = live ? bar_index + 4 : math.min(f.barIdx + ltfShowBars, bar_index)
+                box.set_right(f.bx, xr)
+                if not na(f.ce)
+                    line.set_x2(f.ce, xr)
             bg = f.state == 1 ? ifvgCol : (f.dir == 1 ? fvgBullCol : fvgBearCol)
-            box.set_bgcolor(f.bx, hide ? color.new(bg, 100) : bg)
-            box.set_text_color(f.bx, hide ? color.new(color.white, 100) : color.new((f.state == 1 ? -f.dir : f.dir) == 1 ? bullCol : bearCol, 15))
+            box.set_bgcolor(f.bx, show ? bg : color.new(bg, 100))
+            box.set_text_color(f.bx, show ? color.new((f.state == 1 ? -f.dir : f.dir) == 1 ? bullCol : bearCol, 15) : color.new(color.white, 100))
             if not na(f.ce)
-                line.set_color(f.ce, hide ? color.new(color.white, 100) : color.new(f.dir == 1 ? bullCol : bearCol, 50))
+                line.set_color(f.ce, show ? color.new(f.dir == 1 ? bullCol : bearCol, 50) : color.new(color.white, 100))
+
+f_slotLtf(string tf) =>
+    timeframe.in_seconds(tf) < 900
 
 f_ladderSlot(string tf, bool on) =>
     sec = timeframe.in_seconds(tf)
@@ -1826,13 +1839,13 @@ if heavyDraw
         f_placeRight(htf5)
         f_placeRight(htf6)
     if useFvg
-        f_promote(fvgs, htf1, promote and isLtf and f_ladderSlot(htfTf1, htfOn1), nearAtr)
-        f_promote(htf1, htf2, promote and isLtf and f_ladderSlot(htfTf1, htfOn1) and f_ladderSlot(htfTf2, htfOn2), nearAtr * 3)
-        f_promote(htf2, htf3, promote and isLtf and f_ladderSlot(htfTf2, htfOn2) and f_ladderSlot(htfTf3, htfOn3), nearAtr * 3)
-        f_promote(htf3, htf4, false, nearAtr * 3)
-        f_promote(htf4, htf5, false, nearAtr * 3)
-        f_promote(htf5, htf6, false, nearAtr * 3)
-        f_promote(htf6, htf5, false, nearAtr * 3)
+        f_gapVis(fvgs, htf1, promote and isLtf and f_ladderSlot(htfTf1, htfOn1), true, nearAtr)
+        f_gapVis(htf1, htf2, promote and isLtf and f_ladderSlot(htfTf1, htfOn1) and f_ladderSlot(htfTf2, htfOn2), f_slotLtf(htfTf1), nearAtr * 3)
+        f_gapVis(htf2, htf3, promote and isLtf and f_ladderSlot(htfTf2, htfOn2) and f_ladderSlot(htfTf3, htfOn3), f_slotLtf(htfTf2), nearAtr * 3)
+        f_gapVis(htf3, htf4, false, f_slotLtf(htfTf3), nearAtr * 3)
+        f_gapVis(htf4, htf5, false, f_slotLtf(htfTf4), nearAtr * 3)
+        f_gapVis(htf5, htf6, false, f_slotLtf(htfTf5), nearAtr * 3)
+        f_gapVis(htf6, htf5, false, f_slotLtf(htfTf6), nearAtr * 3)
 
 // ───────────────────────────── Macro window (:50 → :10 New York) ─────────────────────────────
 f_macroText() =>
@@ -1895,7 +1908,7 @@ if barstate.islast
         htfTxt = htfAlignedTf != "" ? htfAlignedTf + " FVG ✓" : "Not recorded"
         smtTxt = smtFresh ? "Recorded ✓" : "Not recorded"
         vpTxt = not useVp ? "Off" : planLive ? st.plVpBasis : st.vpDir != 0 ? st.vpRole + " " + st.vpLevel + " · " + (dirNow == st.vpDir ? "Same direction" : "Opposite direction") : vpLocation
-        statusTxt = st.plState == 2 ? (st.plHit > 0 ? "TP" + str.tostring(st.plHit) + " ✓" : "ACTIVE") : st.plState == 1 ? "Waiting for " + st.plModel + " entry · " + f_price(st.plEntry) : resultFresh ? st.lastResult : noteFresh ? st.lastNote : st.swDir == 2 ? "Review · two-sided sweep" : sweepLive and not st.reactOK ? "Waiting for reaction" : sweepLive and st.reactOK ? "Waiting for FVG / IFVG entry" : st.vpDir != 0 and st.vpKind == "Rotation" ? "Waiting for VP retest/hold" : st.vpDir != 0 ? "Waiting for FVG retest" : "Scanning"
+        statusTxt = st.plState == 2 ? (st.plHit > 0 ? "TP" + str.tostring(st.plHit) + " ✓" : "ACTIVE") + (st.plDir == 1 ? " · LONG" : " · SHORT") : st.plState == 1 ? "Waiting for " + st.plModel + " entry · " + f_price(st.plEntry) : resultFresh ? st.lastResult : noteFresh ? st.lastNote : st.swDir == 2 ? "Review · two-sided sweep" : sweepLive and not st.reactOK ? "Waiting for reaction" : sweepLive and st.reactOK ? "Waiting for FVG / IFVG entry" : st.vpDir != 0 and st.vpKind == "Rotation" ? "Waiting for VP retest/hold" : st.vpDir != 0 ? "Waiting for FVG retest" : "Scanning"
         macroTxt = f_macroText()
         macroOn  = str.startswith(macroTxt, "Ends")
         macroCol = macroOn ? okCol : dimCol
@@ -1905,7 +1918,7 @@ if barstate.islast
         statsTxt = str.tostring(st.nPlans) + " ideas · win " + (decided > 0 ? str.tostring(math.round(100.0 * st.nWin / decided)) + "%" : "–") + " (TP1) · TP3 " + (decided > 0 ? str.tostring(math.round(100.0 * st.nFull / decided)) + "%" : "–") + " · stops " + str.tostring(st.nLoss) + " · expired " + str.tostring(st.nExp)
         swCol = sweepLive ? okCol : st.swDir == 2 ? warnCol : dimCol
         modelCol = st.plState == 2 ? okCol : warnCol
-        statusCol = st.plState == 2 ? okCol : st.plState == 4 ? bearCol : st.plState == 1 or str.startswith(statusTxt, "Waiting") ? warnCol : txtCol
+        statusCol = st.plState == 2 ? okCol : st.plState == 4 and resultFresh ? bearCol : st.plState == 1 or str.startswith(statusTxt, "Waiting") ? warnCol : txtCol
         table.cell(cl, 0, 0, headerTxt, text_color = dirColor, bgcolor = headBg, text_size = panelSize, text_halign = text.align_left)
         table.cell(cl, 1, 0, "", bgcolor = headBg)
         table.merge_cells(cl, 0, 0, 1, 0)
@@ -1979,7 +1992,7 @@ if newPlan
     tpTxt = ""
     for [i, tp] in st.plTps
         tpTxt := tpTxt + " · TP" + str.tostring(i + 1) + " " + f_price(tp)
-    alert("NEW IDEA · G2S " + (st.plDir == 1 ? "Bull" : "Bear") + " · Grade " + st.plGrade + " · " + st.plFamily + " · " + st.plModel + " (" + st.plLed + ") · " + syminfo.ticker + " " + chartTfLabel + " · Entry " + f_price(st.plEntry) + " · SL " + f_price(st.plSl) + tpTxt + " · " + (st.plState == 2 ? "ACTIVE" : "Pending"), alert.freq_once_per_bar_close)
+    alert("NEW IDEA · G2S " + (st.plDir == 1 ? "Bull · LONG" : "Bear · SHORT") + " · Grade " + st.plGrade + " · " + st.plFamily + " · " + st.plModel + " (" + st.plLed + ") · " + syminfo.ticker + " " + chartTfLabel + " · Entry " + f_price(st.plEntry) + " · SL " + f_price(st.plSl) + tpTxt + " · " + (st.plState == 2 ? "ACTIVE" : "Pending"), alert.freq_once_per_bar_close)
 
 alertcondition(sweepEvent, "G2S · Liquidity sweep", "G2S Compass: liquidity sweep on {{ticker}} {{interval}}")
 alertcondition(reactEvent, "G2S · Directional reaction", "G2S Compass: displacement / sharp reversal on {{ticker}} {{interval}}")
