@@ -1319,13 +1319,15 @@ f_planEnd(int state, string result) =>
         f_planFreeze()
     else
         f_planClear()
-    if state == 5 and not na(st.plFvg)
-        st.plFvg.used := false
+    // a spent VP rotation must be re-earned; a price-action plan only resets the hold progress
+    // (two plain ifs: Pine infers a function's return type from its last if/else, so the branches must not differ in type)
     if st.plLed == "VP-led"
         f_vpReset()
-    else
+    if st.plLed != "VP-led"
         st.holdCount := 0
         st.holdExt := st.vpDir == 1 ? low : high
+    if state == 5 and not na(st.plFvg)
+        st.plFvg.used := false
 
 drawPlanNow = false
 if confirmed and (st.plState == 1 or st.plState == 2)
