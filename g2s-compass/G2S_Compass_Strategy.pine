@@ -120,6 +120,8 @@ vpSesAL    = input.session("1800-0930", "Asia/London profile", group = G6)
 vpSesNY    = input.session("0930-1700", "New York profile", group = G6)
 vpPmRestart = input.bool(true, "Restart DEV for NY PM", inline = "pm", group = G6)
 vpSesPM    = input.session("1330-1700", "", inline = "pm", group = G6, tooltip = "Starts a fresh developing profile at the PM open. As in the original, the overnight profile keeps serving as OV through the afternoon; the morning profile returns tomorrow as PD.")
+vpDist     = input.string("Intrabar (auto)", "Volume distribution", options = ["Intrabar (auto)", "Bar range", "Close only"], inline = "vd", group = G6)
+vaMethod   = input.string("Classic (two-row blocks)", "Value area", options = ["Classic (two-row blocks)", "Single rows"], inline = "vd", group = G6, tooltip = "How each bar's volume lands in the rows.\nIntrabar (auto): the bar is split into its lower-timeframe candles (1m on charts up to 15m, 5m on 1H, 15m on 4H, 1H on daily) and each one spreads its own volume over the rows it covers – the most accurate shape, and what the standard profile scripts do. On a 1m chart it falls back to the bar range. TradingView serves about 100,000 intrabars, so very old bars fall back too.\nBar range: the whole bar's volume spread evenly over its high–low range.\nClose only: all volume at the close.\nValue area: Classic grows from the POC by the larger of the two rows above vs the two rows below (the CBOT method used by the built-in Volume Profile); Single rows grows one row at a time. Different choices move VAH / POC / VAL by a few points, which is what you see when two profile scripts disagree.")
 vpRows     = input.int(200, "Rows", minval = 10, maxval = 2000, step = 10, inline = "rv", group = G6)
 vpVaPct    = input.float(70, "Value area %", minval = 50, maxval = 95, step = 1, inline = "rv", group = G6, tooltip = "Rows: how finely the expected session range is sliced (more = finer VAH / POC / VAL). 200 ≈ 1.25-point rows on NQ; the histogram is drawn in at most 80 rows anyway, and every row costs loop time on every bar. Value area: share of volume around the POC that defines VAH / VAL (70% is standard).")
 showDev = input.bool(true, "Levels · DEV", inline = "vr", group = G6)
@@ -281,6 +283,10 @@ f_mmss(int secs) =>
 
 // Previous-day high / low from the daily feed (non-repainting: closed bar + lookahead_on).
 [pdHigh, pdLow, pdTime] = request.security(syminfo.tickerid, "D", [high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
+// Intrabar candles for the Volume Profile (one lower timeframe per chart timeframe; never equal to or above the chart's).
+ltfStr = chartSec <= 900 ? "1" : chartSec <= 3600 ? "5" : chartSec <= 14400 ? "15" : "60"
+ltfOK  = vpDist == "Intrabar (auto)" and timeframe.in_seconds(ltfStr) < chartSec
+[ibH, ibL, ibV, ibUp] = request.security_lower_tf(syminfo.tickerid, ltfStr, [high, low, volume, close >= open], ignore_invalid_timeframe = true)
 pdRange = nz(pdHigh - pdLow, atr * 20)
 
 // HTF candles for the FVG map: last three *completed* bars of each slot timeframe.
@@ -404,6 +410,7 @@ type Profile
     array<box> boxes
     int    pocIdx       // row holding the most volume, maintained by f_acc so f_levels never rescans
     float  pocVol
+    int    bars         // chart bars accumulated (eligibility and the caption)
 
 type Piv
     float price
@@ -662,12 +669,12 @@ var Shadow sh = Shadow.new(state = 0, dir = 0, tps = array.new<float>(), hit = 0
 
 // ───────────────────────────── Volume Profile engine ─────────────────────────────
 f_newProfile(string kind, float rowSize) =>
-    Profile.new(kind = kind, startBar = bar_index, rowSize = rowSize, base = na, vol = array.new<float>(), upv = array.new<float>(), total = 0.0, hi = high, lo = low, done = false, boxes = array.new<box>(), pocIdx = 0, pocVol = 0.0)
+    Profile.new(kind = kind, startBar = bar_index, rowSize = rowSize, base = na, vol = array.new<float>(), upv = array.new<float>(), total = 0.0, hi = high, lo = low, done = false, boxes = array.new<box>(), pocIdx = 0, pocVol = 0.0, bars = 0)
 
-f_acc(Profile p) =>
-    v = na(volume) or volume <= 0 ? 1.0 : volume
-    iLo = math.floor(low / p.rowSize)
-    iHi = math.floor(high / p.rowSize)
+f_accRange(Profile p, float h, float l, float vol0, bool isUp) =>
+    v = na(vol0) or vol0 <= 0 ? 1.0 : vol0
+    iLo = math.floor(l / p.rowSize)
+    iHi = math.floor(h / p.rowSize)
     n = iHi - iLo + 1
     curSize = na(p.base) ? 0 : array.size(p.vol)
     spanRows = na(p.base) ? n : math.max(iHi, p.base + curSize - 1) - math.min(iLo, p.base) + 1
@@ -688,7 +695,7 @@ f_acc(Profile p) =>
             p.vol := array.concat(p.vol, array.new<float>(k, 0.0))
             p.upv := array.concat(p.upv, array.new<float>(k, 0.0))
         share = v / n
-        up = close >= open ? share : 0.0
+        up = isUp ? share : 0.0
         for j = iLo to iHi
             idx = j - p.base
             nv = array.get(p.vol, idx) + share
@@ -699,8 +706,19 @@ f_acc(Profile p) =>
                 p.pocVol := nv
                 p.pocIdx := idx
         p.total += v
-        p.hi := math.max(p.hi, high)
-        p.lo := math.min(p.lo, low)
+        p.hi := math.max(p.hi, h)
+        p.lo := math.min(p.lo, l)
+
+f_acc(Profile p) =>
+    p.bars += 1
+    nIb = ltfOK and not na(ibV) ? array.size(ibV) : 0
+    if nIb > 0
+        for i = 0 to nIb - 1
+            f_accRange(p, array.get(ibH, i), array.get(ibL, i), array.get(ibV, i), array.get(ibUp, i))
+    else if vpDist == "Close only"
+        f_accRange(p, close, close, volume, close >= open)
+    else
+        f_accRange(p, high, low, volume, close >= open)
 
 f_levels(Profile p) =>
     n = array.size(p.vol)
@@ -712,14 +730,16 @@ f_levels(Profile p) =>
         acc = maxV
         lo = pocIdx
         hi = pocIdx
+        classic = vaMethod == "Classic (two-row blocks)"
         while acc < target and (lo > 0 or hi < n - 1)
-            vUp = hi < n - 1 ? array.get(p.vol, hi + 1) : -1.0
-            vDn = lo > 0 ? array.get(p.vol, lo - 1) : -1.0
+            // the next block above vs below the area; the larger one joins (two rows at a time in the classic method)
+            vUp = hi < n - 1 ? array.get(p.vol, hi + 1) + (classic and hi < n - 2 ? array.get(p.vol, hi + 2) : 0.0) : -1.0
+            vDn = lo > 0 ? array.get(p.vol, lo - 1) + (classic and lo > 1 ? array.get(p.vol, lo - 2) : 0.0) : -1.0
             if vUp >= vDn
-                hi += 1
+                hi := math.min(n - 1, hi + (classic ? 2 : 1))
                 acc += vUp
             else
-                lo -= 1
+                lo := math.max(0, lo - (classic ? 2 : 1))
                 acc += vDn
         p.vah := (p.base + hi + 1) * p.rowSize
         p.val := (p.base + lo) * p.rowSize
@@ -874,14 +894,16 @@ if confirmed and useVp
         if not na(wk)
             f_acc(wk)
 
+f_devNeed() =>
+    // never demand more than a quarter of the session's bars, so DEV still becomes eligible on 5m / 15m charts
+    sesSec = na(dev) ? 55800 : dev.kind == "PM" ? 12600 : dev.kind == "NY" ? (vpPmRestart ? 14400 : 27000) : 55800
+    math.min(devMinBars, math.max(1, math.round(sesSec / chartSec / 4.0)))
+
 f_devEligible() =>
     r = false
     if not na(dev)
         if not na(dev.poc)
-            // never demand more than a quarter of the session's bars, so DEV still becomes eligible on 5m / 15m charts
-            sesSec = dev.kind == "PM" ? 12600 : dev.kind == "NY" ? (vpPmRestart ? 14400 : 27000) : 55800
-            need = math.min(devMinBars, math.max(1, math.round(sesSec / chartSec / 4.0)))
-            r := bar_index - dev.startBar >= need
+            r := dev.bars >= f_devNeed()
     r
 
 devEligible = f_devEligible()
@@ -1974,7 +1996,7 @@ f_drawVpLevels() =>
         if not na(dev)
             x1 := dev.startBar
             if useVpLabels and showDev and not na(dev.poc)
-                capTxt = "DEV - " + (dev.kind == "AL" ? "Asia/London" : dev.kind == "PM" ? "New York PM" : "New York") + " VP [live]" + (devEligible ? "" : " *")
+                capTxt = "DEV - " + (dev.kind == "AL" ? "Asia/London" : dev.kind == "PM" ? "New York PM" : "New York") + " VP [live]" + (devEligible ? "" : " * " + str.tostring(dev.bars) + "/" + str.tostring(f_devNeed()) + " bars")
                 array.push(vpLbls, label.new(dev.startBar, dev.hi, capTxt, style = label.style_label_right, color = color.new(color.white, 100), textcolor = color.new(chart.fg_color, 40), size = size.tiny))
         x2 = bar_index + 4
         for role in vpRoles
