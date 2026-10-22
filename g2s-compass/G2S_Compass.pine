@@ -2198,6 +2198,8 @@ f_planDraw() =>
             for [i, tp] in st.plTps
                 if i > 0 or showPlan == "Lines"
                     array.push(st.lnTps, line.new(x1, tp, x2, tp, color = grey, style = line.style_dotted))
+    // plain final statement: the if / else above has branches of different types (box vs. loop), which Pine would otherwise try to unify (CE10235)
+    usePlanDraw
 
 // plan tabs for the right-edge column (last bar)
 f_planLabels() =>
