@@ -155,6 +155,14 @@ What changed: entries at the zone's 50 % (CE); stop floors, buffers and the max 
 
 On the worked example the result is entry +28.5, stop −2.5, R = 31 points, TP1 = the leg high at 1.0 R, 0 % timeouts. Judge it on 30–40 decided saved ideas, not 10: at a 45 % rate, one win in ten happens 2 % of the time, three or fewer in ten 27 % of the time.
 
+## Sweep window and the Decision row
+
+**Sweeps.** A level used to count as swept only when the same candle wicked through it and closed back; a raid that closed beyond the level for one or two candles and then failed back was marked *taken* and never became a sweep, which is why the original's "NY AM Low ✓" often had no counterpart here. A level is now swept when price trades through it and the close comes back to the original side within `Sweep window (bars)` (default 3, 1 = same candle only); a level still closed through after the window is a break. The sweep extreme is the farthest print of the whole raid, so the stop, the leg and the sweep mark use the real wick. Internal pivots and equal highs / lows use the same window.
+
+**Decision row.** Every complete candidate is now evaluated on every bar, even when no plan can be saved, and the checklist panel reads it back as one line: **GO** (a plan is pending or active, with the entry), **NO** (a complete setup was refused, with the gate that refused it: grade below the floor, quality floor, outside the window, cooldown, HTF bias, trend day, session cap, no target, no structural stop), or **WAIT** (what is still missing: a sweep, the displacement, the structure shift, the zone retest). Hover the row for the full gate checklist (✓ / ✗ per gate) and the 11 confluence points. The **Plan preview** row shows the live plan or the last complete candidate as it would be traded: direction, model, entry, stop (points and ATR), TP1 (R) and the grade with its score. A refused candidate stays readable for `Keep result visible` bars.
+
+**Grading.** A gate point is only deducted when the candidate actually earned it through that gate: a VP-led idea that passed the quality floor on value context is no longer charged for a sweep it never needed (it is charged for the VP point instead), and the shift point is only deducted from price-action ideas. In the Balanced preset the re-sweep guard is off; it made too many ideas wait for a pool just under the wick.
+
 ## Known differences from the invite-only script
 
 * Volume at price is estimated from chart bars (volume split evenly across the rows a bar covers, up/down by candle colour), the same class of estimate the original describes.
