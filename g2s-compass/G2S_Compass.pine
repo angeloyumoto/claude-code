@@ -16,7 +16,10 @@ indicator("G2S Compass · Rebuild", shorttitle = "G2S", overlay = true, max_boxe
 // Drawings convert bar-index coordinates to timestamps through `time`; an old gap's edge set thousands of bars back
 // needs that buffer (runtime error RE10143 otherwise). 5000 is the maximum; every edge is also clamped to that reach.
 max_bars_back(time, 5000)
-const int DRAW_REACH = 4500
+const int DRAW_REACH = 2000
+// every historical x-coordinate goes through f_x: never further back than the chart's time buffer can resolve
+f_x(int x) =>
+    math.max(x, math.max(2, bar_index - DRAW_REACH))
 
 const string TZ = "America/New_York"
 
@@ -65,7 +68,7 @@ pivLen       = input.int(5, "length", minval = 2, maxval = 30, inline = "ip", gr
 reactWindow  = input.int(30, "Reaction window after sweep (bars)", minval = 3, group = G3, tooltip = "A sweep is dropped if no displacement / sharp reversal in its direction follows within this many bars. A two-sided sweep ('Review') also clears after this.")
 thesisWindow = input.int(120, "Trade idea window after reaction (bars)", minval = 10, group = G3, tooltip = "How long a confirmed sweep + reaction stays the working trade idea. It also ends as soon as price closes back through the sweep extreme.")
 dispAtr      = input.float(1.0, "Displacement body ≥ ATR ×", minval = 0.2, step = 0.1, group = G3, tooltip = "Displacement candle: body at least this × ATR(14), body at least half the range, closing beyond the previous bar's high / low in the working direction.")
-wickMult     = input.float(1.5, "Sharp reversal wick ≥ body ×", minval = 0.5, step = 0.1, group = G3, tooltip = "Sharp reversal candle: range at least 0.8 ATR, rejection wick at least this × the body, closing in the half of the bar that faces the working direction. A later displacement replaces a sharp reversal.")
+wickMult     = input.float(1.5, "Sharp reversal wick ≥ body ×", minval = 0.5, step = 0.1, group = G3, tooltip = "Sharp reversal candle: range at least 1.2 ATR, rejection wick at least this × the body, closing in the half of the bar that faces the working direction. A later displacement replaces a sharp reversal.")
 legMinAtrIn   = input.float(2.0, "Displacement leg ≥ ATR ×", minval = 0, step = 0.25, group = G3, tooltip = "From the sweep extreme to the farthest print since (the leg the reversal has travelled). No FVG / IFVG entry counts until the leg is at least this × ATR(14): a one-candle pop that goes nowhere is not displacement. 0 = off.")
 showSweeps   = input.bool(true, "Mark sweeps", inline = "mk", group = G3)
 showReactTri = input.bool(false, "Reversal triangles", inline = "mk", group = G3, tooltip = "Sweeps: a circle at the swept extreme (bigger and darker for session levels; hover for the level name and price). Triangles: the confirming displacement / reversal candle. Both are hidden in the Value view.")
@@ -152,8 +155,8 @@ devMinBars = input.int(20, "DEV eligible after (bars)", minval = 1, group = G6, 
 const string G7 = "⑧ Trade plan"
 preset      = input.string("Strict · A setups only", "Selectivity preset", options = ["Strict · A setups only", "Original · every graded setup", "Custom · inputs below"], group = G7, tooltip = "Which gates decide what becomes a saved idea (and an alert).\nStrict: grade A or better, the two killzones, external sweep (VP-led ideas pass), 15m+ HTF bias, market structure shift, 2 ATR displacement leg, no full-fill retests, two ideas per session (A+ may add one), cooldown and quiet periods, IFVG Close pending at the zone.\nOriginal: what the invite-only script does – every complete model saves as B or better, any session, internal sweeps count, no bias / confluence / leg / structure-shift gates, no cap, IFVG Close enters at the close. Expect many more ideas and the lower win rate that comes with them.\nCustom: the individual inputs below. Stops, targets, breakeven and the drawings are the same in every preset.")
 gradeMode   = input.string("Confluence score", "Grading", options = ["Confluence score", "G2S original (VP alignment)"], inline = "gm", group = G7)
-scoreA      = input.int(4, "A at", minval = 1, maxval = 10, inline = "gm", group = G7)
-scoreAp     = input.int(6, "A+ at", minval = 2, maxval = 10, inline = "gm", group = G7, tooltip = "Confluence score (default): every complete setup collects up to 10 points – external sweep, market structure shift, strong displacement leg (≥ 3 ATR), HTF FVG, SMT, VP alignment, killzone / Silver Bullet time, discount / premium entry (≥ 50 % retrace of the leg), Unicorn (entry zone overlapping the breaker block), value structure (stacked VP levels or an open outside value rotating back). A = at least 'A at' points, A+ = at least 'A+ at'. The header shows the live score and its hover text lists the points.\nG2S original: A = sweep + reaction AND VP alignment, A+ = A plus two confluences, as the invite-only script grades.")
+scoreA      = input.int(3, "A at", minval = 1, maxval = 10, inline = "gm", group = G7)
+scoreAp     = input.int(5, "A+ at", minval = 2, maxval = 10, inline = "gm", group = G7, tooltip = "Confluence score (default): every complete setup collects up to 10 points – external sweep, market structure shift, strong displacement leg (≥ 3 ATR), HTF FVG, SMT, VP alignment, killzone / Silver Bullet time, discount / premium entry (≥ 50 % retrace of the leg), Unicorn (entry zone overlapping the breaker block), value structure (stacked VP levels or an open outside value rotating back). A = at least 'A at' points, A+ = at least 'A+ at'. The header shows the live score and its hover text lists the points.\nG2S original: A = sweep + reaction AND VP alignment, A+ = A plus two confluences, as the invite-only script grades.")
 entryGaps   = input.string("Chart + 3m / 5m map", "Entry zones from", options = ["Chart + 3m / 5m map", "Chart timeframe only"], group = G7, tooltip = "Which fair value gaps can be retested for an entry. Chart + 3m / 5m map (default): on a 1m chart the mapped 3m and 5m gaps formed since the sweep are entry zones too, so a clean 5m gap counts even when the 1m gap is messy. IFVGs always come from the chart timeframe.")
 useBreaker  = input.bool(true, "Breaker block entries", inline = "bk", group = G7)
 showBreaker = input.bool(true, "draw it", inline = "bk", group = G7, tooltip = "ICT breaker block: after the sweep and the structure shift, the last candle that closed in the old direction at the swing the shift broke (the failed order block) becomes a zone. A retest that closes back beyond it is the 'Breaker Retest' model; an FVG entry zone overlapping it is the 'Unicorn' confluence point. The zone ends when price closes through it.")
@@ -162,19 +165,23 @@ showPlan    = input.bool(true, "Draw Entry / SL / TP", group = G7, tooltip = "Li
 entryRefIn  = input.string("Near Edge", "FVG entry reference", options = ["Near Edge", "50%", "Far Edge", "Confirmation Close"], group = G7, tooltip = "Where a retest plan enters inside the FVG / IFVG. Near Edge = the edge price reaches first (original default). Confirmation Close = the current close, so the plan is live at once instead of pending.")
 stopRefIn   = input.string("Structure (sweep wick → pivot → gap)", "Stop reference (FVG models)", options = ["Structure (sweep wick → pivot → gap)", "FVG far edge", "Trade Idea High/Low", "Latest High/Low", "Internal High/Low", "ATR Stop"], group = G7, tooltip = "Structural stop for FVG / IFVG models (VP models always use the hold / retest extreme or the level).\nStructure: the sweep wick while it is within 'Max stop', else the nearest protected pivot between the entry and that wick, else the far edge of the zone (checklist: below / above the rejection wick, 1–2 structure legs behind the entry, protected by internal liquidity).\nFVG far edge: opposite edge of the zone.\nTrade Idea High/Low: the sweep extreme.\nLatest High/Low: the displacement candle extreme (a deep retest tags it on a 1m chart).\nInternal High/Low: nearest protected pivot.\nATR Stop: ATR distance only.")
 slBufTicks  = input.int(4, "Stop buffer (ticks)", minval = 0, inline = "sl", group = G7)
-slBufAtr    = input.float(0.25, "or ATR ×", minval = 0, step = 0.05, inline = "sl", group = G7, tooltip = "The buffer beyond the structural stop is the LARGER of the two. A few ticks is not enough on a 1m NQ chart: the second, slightly deeper sweep of the same low tags it (0.25 ATR ≈ 2–4 NQ points).")
+slBufAtr    = input.float(0.25, "or ATR ×", minval = 0, step = 0.05, inline = "sl", group = G7)
+slBufLegPctIn = input.float(8, "or % of the leg", minval = 0, step = 1, inline = "sl", group = G7, tooltip = "The buffer beyond the structural stop is the LARGEST of ticks, ATR × (the 5-minute ATR on 1m charts) and this share of the displacement leg, so the stop scales with the move being traded. A few ticks is not enough on a 1m NQ chart: the second, slightly deeper sweep of the same low tags it.")
+resweepModeIn = input.string("Extend", "Next pool under the wick", options = ["Extend", "Skip", "Off"], inline = "rs", group = G7)
+resweepAtr  = input.float(0.75, "within (ATR ×)", minval = 0.1, step = 0.25, inline = "rs", group = G7, tooltip = "An untaken session / PDH / PDL level or pivot that sits just beyond the sweep wick is the next target of the same sweep. Extend: the stop reference moves beyond that level (buffer and Max stop still apply). Skip: the idea waits. ATR here is the 5-minute ATR on 1m charts.")
+oneIdeaPerSweepIn = input.bool(true, "One saved idea per sweep", group = G7, tooltip = "A sweep yields at most one idea that activates or is stopped. A deeper print beyond the sweep wick re-bases the sweep (new displacement and shift required), so a second idea needs new evidence, not the same wick.")
 atrFallback = input.bool(false, "ATR stop when no structure fits", inline = "af", group = G7)
 slAtrMult   = input.float(1.0, "× ATR", minval = 0.2, step = 0.1, inline = "af", group = G7, tooltip = "Off (default): an idea whose structural stop is missing, tighter than 0.25 ATR or wider than 'Max stop' is skipped (Status shows why) instead of getting a stop that no structure protects. On: the ATR stop (× ATR 14) replaces it and TP1 must pay 'TP1 minimum when the stop is the ATR fallback'.")
 maxSlAtr    = input.float(3.0, "Max stop (ATR ×)", minval = 0.5, step = 0.5, inline = "mx", group = G7)
 maxTpAtr    = input.float(8.0, "max target (ATR ×)", minval = 1, step = 0.5, inline = "mx", group = G7, tooltip = "A structural stop farther than the first value falls back to the ATR stop; candidate targets farther than the second are ignored.")
 minTp1R     = input.float(1.0, "TP1 minimum (R)", minval = 0.25, step = 0.25, inline = "tp", group = G7)
 tpSepR      = input.float(0.25, "separation (R)", minval = 0.1, step = 0.05, inline = "tp", group = G7, tooltip = "Targets (max 3, nearest first) come from VP levels, untaken session highs / lows, pivots and opposing FVG edges. Every target must be at least 'TP1 minimum' R away, and targets closer than 'separation' R to one already chosen are skipped. No valid target = no plan.")
-pendingBars = input.int(40, "Pending expires after (bars)", minval = 5, inline = "lf", group = G7)
-planMaxBars = input.int(150, "active times out after", minval = 10, inline = "lf", group = G7, tooltip = "Pending: bars a retest plan waits for price to reach the entry. Active: bars an entered plan may run without reaching TP1 before it is marked expired.")
+pendingBars = input.int(40, "Pending expires after (bars)", minval = 5, maxval = 1000, inline = "lf", group = G7)
+planMaxBars = input.int(150, "active times out after", minval = 10, maxval = 2000, inline = "lf", group = G7, tooltip = "Pending: bars a retest plan waits for price to reach the entry. Active: bars an entered plan may run without reaching TP1 before it is marked expired.")
 resultBars  = input.int(10, "Show result for (bars)", minval = 1, group = G7)
 minGradeIn  = input.string("A", "Minimum grade to save", options = ["B", "A", "A+"], inline = "fl", group = G7)
 qualityFloorIn = input.string("External sweep (VP-led ideas pass)", "Quality floor", options = ["Off", "External sweep or VP context", "External sweep (VP-led ideas pass)", "External sweep"], group = G7, tooltip = "Which context may become an idea. Off = any confirmed sweep, including the small internal pivots (③ length). External sweep or VP context = a session / PDH / PDL sweep, or any VP level cross in the idea's direction. External sweep (VP-led ideas pass) = price-action ideas need a live session / PDH / PDL sweep in their direction; VP Hold / VP Retest ideas pass on their own. External sweep = every idea needs the external sweep.")
-htfBiasIn    = input.string("15m+ FVG map", "HTF bias filter", options = ["Off", "15m+ FVG map", "Value location (OV / PD)", "Both"], group = G7, tooltip = "Refuse ideas against the higher-timeframe picture. 15m+ FVG map: the newest active mapped gap of 15m or higher sets the bias (none active = neutral). Value location: above the last completed value area (OV, else PD) = bull only, below = bear only, inside = neutral. Both: an idea must not oppose either. Reversal ideas often oppose the last 15m gap, so this trades frequency for alignment.")
+htfBiasIn    = input.string("Value location (OV / PD)", "HTF bias filter", options = ["Off", "15m+ FVG map", "Value location (OV / PD)", "Daily bias", "Value + Daily", "Map + Value"], group = G7, tooltip = "Refuse ideas against the higher-timeframe picture. 15m+ FVG map: the newest active mapped gap of 15m or higher sets the bias (none active = neutral). Value location: above the last completed value area (OV, else PD) = bull only, below = bear only, inside = neutral. Both: an idea must not oppose either. Reversal ideas often oppose the last 15m gap, so this trades frequency for alignment.")
 coolStopIn   = input.bool(true, "Cooldown · no re-entry on the same structure after a stop-out", group = G7, tooltip = "After a stop-out, no new idea in the same direction from the same sweep (same sweep bar) or the same VP level cross. A deeper / fresh sweep, a new level cross or an opposite-direction idea lifts it.")
 openQuietMinIn = input.int(5, "No ideas in the first (min) of a session", minval = 0, inline = "qt", group = G7)
 reviewQuietIn = input.int(15, "and (bars) after a two-sided sweep", minval = 0, inline = "qt", group = G7, tooltip = "Quiet periods: no plan is saved (and no NEW IDEA alert fires) this many minutes after a shown ② session opens, nor this many bars after a two-sided sweep, even when a one-sided sweep replaces the review at once. Sweeps, reactions and the panel keep updating; a retest after the quiet time still counts. 0 = off.")
@@ -193,7 +200,11 @@ needOptIn    = input.bool(true, "Require an HTF FVG or SMT confluence", group = 
 noFullFillIn = input.bool(true, "Retest must not fill the whole gap", group = G7, tooltip = "An FVG / IFVG retest counts only when the retest candle's wick stays inside the zone (does not trade through its far edge). A full fill that then closes back is a weaker imbalance and, on a 1m chart, usually the first leg of the deeper pullback that takes the stop.")
 tradeWindowIn = input.string("Killzones", "during", options = ["Killzones", "Silver Bullet (10–11 · 14–15)", "Any", "NY AM + PM", "NY AM only"], inline = "fl", group = G7, tooltip = "B = one complete entry model. A = sweep + reaction AND VP alignment (same direction). A+ = A plus two confluences (HTF FVG, SMT, external sweep, stacked VP levels). Default A: only complete, aligned setups are saved and alerted. The Playbook view has no VP, so there the floor is B. Ideas outside the window are not saved and do not alert.")
 kzAm        = input.session("0930-1100", "Killzones · AM", inline = "kz", group = G7)
-kzPm        = input.session("1330-1600", "PM", inline = "kz", group = G7, tooltip = "The 'Killzones' trading window (New York time): ideas are saved and alerted only inside these two ranges. The 11:00–13:30 chop is skipped by default; widen the ranges here if you trade it.")
+kzPm        = input.session("1330-1500", "PM", inline = "kz", group = G7, tooltip = "The 'Killzones' trading window (New York time): ideas are saved and alerted only inside these two ranges. The 11:00–13:30 chop is skipped by default; widen the ranges here if you trade it.")
+lateWin     = input.session("1500-1545", "Late · continuation only", inline = "kz2", group = G7)
+mocQuietIn  = input.bool(true, "no ideas 15:45–16:00", inline = "kz2", group = G7, tooltip = "Between the PM killzone and 15:45 only Value Continuation and with-trend ideas are saved (reversal ideas are shadowed as 'late-session reversal'); no new idea in the closing imbalance prints after 15:45.")
+lunchQuietIn = input.bool(true, "Ignore VP crosses 12:00–13:29", inline = "lq", group = G7)
+replacePendingIn = input.bool(true, "A stronger setup replaces a pending plan", inline = "lq", group = G7, tooltip = "Lunch: a value-area cross during the thin midday is not recorded (it must be re-confirmed after 13:30). Replace: while a plan is pending (not filled), a candidate with a higher confluence score replaces it instead of being blocked for up to 'Pending expires after' bars.")
 sbAm        = input.session("1000-1100", "Silver Bullet · AM", inline = "sb", group = G7)
 sbPm        = input.session("1400-1500", "PM", inline = "sb", group = G7, tooltip = "ICT Silver Bullet hours (New York time). As a trading window only these hours save ideas; in every window being inside them (or the killzones) earns the 'Time' confluence point.")
 showStats   = input.bool(true, "Stats row (ideas · win rate)", inline = "st", group = G7)
@@ -221,10 +232,16 @@ needOpt       = isStrict ? false : isOrig ? false : needOptIn
 legMinAtr     = isStrict ? 2.0 : isOrig ? 0.0 : legMinAtrIn
 noFullFill    = isStrict ? true : isOrig ? false : noFullFillIn
 needMss       = isStrict ? true : isOrig ? false : needMssIn
-sesIdeaCap    = isStrict ? 2 : isOrig ? 0 : sesIdeaCapIn
+sesIdeaCap    = isStrict ? 1 : isOrig ? 0 : sesIdeaCapIn
 apExtra       = isStrict ? true : isOrig ? true : apExtraIn
 qualityFloor  = isStrict ? "External sweep (VP-led ideas pass)" : isOrig ? "Off" : qualityFloorIn
-htfBias       = isStrict ? "15m+ FVG map" : isOrig ? "Off" : htfBiasIn
+htfBias       = isStrict ? "Value location (OV / PD)" : isOrig ? "Off" : htfBiasIn
+resweepMode   = isStrict ? "Extend" : isOrig ? "Off" : resweepModeIn
+slBufLegPct   = isStrict ? 8.0 : isOrig ? 0.0 : slBufLegPctIn
+oneIdeaPerSweep = isStrict ? true : isOrig ? false : oneIdeaPerSweepIn
+mocQuiet      = isStrict ? true : isOrig ? false : mocQuietIn
+lunchQuiet    = isStrict ? true : isOrig ? false : lunchQuietIn
+replacePending = isStrict ? true : isOrig ? false : replacePendingIn
 coolStop      = isStrict ? true : isOrig ? false : coolStopIn
 openQuietMin  = isStrict ? 5 : isOrig ? 0 : openQuietMinIn
 reviewQuiet   = isStrict ? 15 : isOrig ? 0 : reviewQuietIn
@@ -270,8 +287,12 @@ pdStyle  = f_style(pdStyleIn)
 
 // ───────────────────────────── Core series ─────────────────────────────
 atr      = ta.atr(14)
+lo6      = ta.lowest(low, 6)
+hi6      = ta.highest(high, 6)
 tick     = syminfo.mintick
 chartSec = timeframe.in_seconds(timeframe.period)
+atr5     = request.security(syminfo.tickerid, "5", ta.atr(14)[1], lookahead = barmerge.lookahead_on)
+atrRisk  = chartSec < 300 ? nz(atr5, atr * 2) : atr     // stop floors and buffers on a 5-minute ATR, so 1m and 5m charts carry the same risk
 isLtf    = chartSec < 15 * 60
 bodySz   = math.abs(close - open)
 rangeSz  = high - low
@@ -296,7 +317,8 @@ f_mmss(int secs) =>
     (m < 10 ? "0" : "") + str.tostring(m) + ":" + (r < 10 ? "0" : "") + str.tostring(r)
 
 // Previous-day high / low from the daily feed (non-repainting: closed bar + lookahead_on).
-[pdHigh, pdLow, pdTime] = request.security(syminfo.tickerid, "D", [high[1], low[1], time[1]], lookahead = barmerge.lookahead_on)
+[pdHigh, pdLow, pdTime, pdClose, ppdHigh, ppdLow] = request.security(syminfo.tickerid, "D", [high[1], low[1], time[1], close[1], high[2], low[2]], lookahead = barmerge.lookahead_on)
+dayBias = pdClose > ppdHigh ? 1 : pdClose < ppdLow ? -1 : 0   // yesterday closed outside the prior day's range → bias for today
 // Intrabar candles for the Volume Profile (one lower timeframe per chart timeframe; never equal to or above the chart's).
 ltfStr = chartSec <= 900 ? "1" : chartSec <= 3600 ? "5" : chartSec <= 14400 ? "15" : "60"
 ltfOK  = vpDist == "Intrabar (auto)" and timeframe.in_seconds(ltfStr) < chartSec
@@ -390,6 +412,8 @@ type Ses
     line   dLoLn
     label  dHiLb
     label  dLoLb
+    bool   hiClosed      // the level was closed through (body), not just wicked
+    bool   loClosed
 
 type Fvg
     box    bx
@@ -407,6 +431,8 @@ type Fvg
     bool   traded       // a plan was saved from this gap (kept visible as a short block for review)
     int    resp         // respected retests: touched the near edge, closed back off it, no full fill
     int    lastTouch
+    bool   inKz         // formed inside a killzone / Silver Bullet window (evidence for the time point)
+    bool   inSb
 
 type Profile
     string kind
@@ -510,6 +536,12 @@ type State
     int    vpOpenOut    // session opened above (1) / below (-1) the previous value area (80 % rule context)
     int    plScore
     string plPts
+    bool   swUsed       // one saved idea per sweep
+    int    mssBar
+    bool   mssInWin     // the shift printed inside a killzone / Silver Bullet window
+    int    legExtBar
+    int    rebaseBar    // bar of the last deeper print that re-based the sweep
+    bool   resweepSkip
 
 // A refused setup followed to its outcome (never saved, drawn or alerted) so past ideas stay visible and countable.
 type Shadow
@@ -541,7 +573,7 @@ type Shadow
 
 // ───────────────────────────── Session liquidity ledger ─────────────────────────────
 f_newSes(string name, string abbr, string sess, color col, bool show, bool isPd) =>
-    Ses.new(name = name, abbr = abbr, sess = sess, col = col, show = show, isPd = isPd, active = false, done = false, hiTaken = false, loTaken = false)
+    Ses.new(name = name, abbr = abbr, sess = sess, col = col, show = show, isPd = isPd, active = false, done = false, hiTaken = false, loTaken = false, hiClosed = false, loClosed = false)
 
 var array<Ses> sessions = array.from(
   f_newSes("Asia", "ASIA", sAsia, sAsiaCol, sAsiaOn, false),
@@ -557,6 +589,12 @@ inKzAm = f_inSess(kzAm)
 inKzPm = f_inSess(kzPm)
 inSbAm = f_inSess(sbAm)
 inSbPm = f_inSess(sbPm)
+inLate = f_inSess(lateWin)
+inMoc  = f_inSess("1545-1600")
+lunchNow = f_inSess("1200-1329")
+var int kzSeq = 0
+if confirmed and ((inKzAm and not inKzAm[1]) or (inKzPm and not inKzPm[1]))
+    kzSeq += 1
 
 f_sesDraw(Ses s) =>
     line.delete(s.hiLn)
@@ -565,8 +603,8 @@ f_sesDraw(Ses s) =>
     label.delete(s.loLb)
     if useSesLines and s.show
         lst = s.isPd ? pdStyle : sesStyle
-        s.hiLn := line.new(s.hiBar, s.hi, bar_index + 8, s.hi, color = s.col, style = lst)
-        s.loLn := line.new(s.loBar, s.lo, bar_index + 8, s.lo, color = s.col, style = lst)
+        s.hiLn := line.new(f_x(s.hiBar), s.hi, bar_index + 8, s.hi, color = s.col, style = lst)
+        s.loLn := line.new(f_x(s.loBar), s.lo, bar_index + 8, s.lo, color = s.col, style = lst)
         if useSesLabels
             hiTxt = s.isPd ? "PDH" : s.name + " High"
             loTxt = s.isPd ? "PDL" : s.name + " Low"
@@ -580,8 +618,8 @@ f_sesDrawDev(Ses s) =>
     label.delete(s.dHiLb)
     label.delete(s.dLoLb)
     if useSesLines and s.show
-        s.dHiLn := line.new(s.dHiBar, s.dHi, bar_index + 8, s.dHi, color = color.new(s.col, 40), style = sesStyle)
-        s.dLoLn := line.new(s.dLoBar, s.dLo, bar_index + 8, s.dLo, color = color.new(s.col, 40), style = sesStyle)
+        s.dHiLn := line.new(f_x(s.dHiBar), s.dHi, bar_index + 8, s.dHi, color = color.new(s.col, 40), style = sesStyle)
+        s.dLoLn := line.new(f_x(s.dLoBar), s.dLo, bar_index + 8, s.dLo, color = color.new(s.col, 40), style = sesStyle)
         if useSesLabels
             s.dHiLb := label.new(bar_index + 8, s.dHi, s.name + " High", style = label.style_label_left, color = color.new(color.white, 100), textcolor = color.new(s.col, 30), size = size.tiny)
             s.dLoLb := label.new(bar_index + 8, s.dLo, s.name + " Low", style = label.style_label_left, color = color.new(color.white, 100), textcolor = color.new(s.col, 30), size = size.tiny)
@@ -597,6 +635,8 @@ f_sesCommit(Ses s, float hi, float lo, int hiBar, int loBar, int hiTime, int loT
     s.loTime := loTime
     s.hiTaken := false
     s.loTaken := false
+    s.hiClosed := false
+    s.loClosed := false
     s.hiTakenTime := na
     s.loTakenTime := na
     f_sesDraw(s)
@@ -648,6 +688,7 @@ f_sesUpdate(Ses s, bool inNow, bool isNewDay) =>
             hiSw := math.max(open, close) < s.hi
             s.hiTaken := true
             s.hiTakenTime := time
+            s.hiClosed := close > s.hi
             if not na(s.hiLn)
                 line.set_color(s.hiLn, color.new(s.col, 75))
             if not na(s.hiLb)
@@ -656,6 +697,7 @@ f_sesUpdate(Ses s, bool inNow, bool isNewDay) =>
             loSw := math.min(open, close) > s.lo
             s.loTaken := true
             s.loTakenTime := time
+            s.loClosed := close < s.lo
             if not na(s.loLn)
                 line.set_color(s.loLn, color.new(s.col, 75))
             if not na(s.loLb)
@@ -696,7 +738,7 @@ f_pivScan() =>
 
 // ───────────────────────────── Engine state ─────────────────────────────
 var array<label> sweepMarks = array.new<label>()
-var State st = State.new(swDir = 0, swName = "", swExternal = false, reactOK = false, reactType = "", reactDir = 0, lastNote = "", smtDir = 0, smtWho = "", vpDir = 0, vpRole = "", vpLevel = "", vpKind = "", holdCount = 0, vpModel = "", plState = 0, plDir = 0, plTps = array.new<float>(), plHit = 0, plGrade = "", plModel = "", plFamily = "", plLed = "", plVpBasis = "", lastResult = "", lnTps = array.new<line>(), lbTps = array.new<label>(), lastModel = "", lastModelLed = "", nPlans = 0, nWin = 0, nLoss = 0, nFull = 0, nExp = 0, mssOK = false, plBe = false, ideaSes = -1, ideaCount = 0, swHtf = "", brkOK = false, brkUsed = false, oteUsed = false, vpOpenOut = 0, plScore = 0, plPts = "")
+var State st = State.new(swDir = 0, swName = "", swExternal = false, reactOK = false, reactType = "", reactDir = 0, lastNote = "", smtDir = 0, smtWho = "", vpDir = 0, vpRole = "", vpLevel = "", vpKind = "", holdCount = 0, vpModel = "", plState = 0, plDir = 0, plTps = array.new<float>(), plHit = 0, plGrade = "", plModel = "", plFamily = "", plLed = "", plVpBasis = "", lastResult = "", lnTps = array.new<line>(), lbTps = array.new<label>(), lastModel = "", lastModelLed = "", nPlans = 0, nWin = 0, nLoss = 0, nFull = 0, nExp = 0, mssOK = false, plBe = false, ideaSes = -1, ideaCount = 0, swHtf = "", brkOK = false, brkUsed = false, oteUsed = false, vpOpenOut = 0, plScore = 0, plPts = "", swUsed = false, mssInWin = false, resweepSkip = false)
 var Shadow sh = Shadow.new(state = 0, dir = 0, tps = array.new<float>(), hit = 0, be = false, why = "", lastFvgBar = -1, lastFvgTf = "", lastVpBar = -1, lastBrkBar = -1, lastOteBar = -1, nPlans = 0, nWin = 0, nLoss = 0, nFull = 0, nExp = 0)
 
 // ───────────────────────────── Volume Profile engine ─────────────────────────────
@@ -837,9 +879,9 @@ newVpSession = false
 
 f_freezeDev(Profile p) =>
     if useVp and showDev and not na(p.poc)
-        array.push(frozenLines, line.new(p.startBar, p.vah, p.endBar, p.vah, color = color.new(vahCol, 50), width = 1))
-        array.push(frozenLines, line.new(p.startBar, p.poc, p.endBar, p.poc, color = color.new(pocCol, 50), width = 1))
-        array.push(frozenLines, line.new(p.startBar, p.val, p.endBar, p.val, color = color.new(valCol, 50), width = 1))
+        array.push(frozenLines, line.new(f_x(p.startBar), p.vah, p.endBar, p.vah, color = color.new(vahCol, 50), width = 1))
+        array.push(frozenLines, line.new(f_x(p.startBar), p.poc, p.endBar, p.poc, color = color.new(pocCol, 50), width = 1))
+        array.push(frozenLines, line.new(f_x(p.startBar), p.val, p.endBar, p.val, color = color.new(valCol, 50), width = 1))
         while array.size(frozenLines) > 9
             line.delete(array.shift(frozenLines))
 
@@ -895,9 +937,9 @@ if confirmed and useVp
                     array.clear(old.boxes)
                 hw = f_histW(dev.kind)
                 if vpPlace == "Left"
-                    f_drawProfile(dev, dev.startBar, dev.startBar + hw, true)
+                    f_drawProfile(dev, f_x(dev.startBar), f_x(dev.startBar) + hw, true)
                 else
-                    f_drawProfile(dev, math.max(dev.startBar, dev.endBar - hw), dev.endBar, true)
+                    f_drawProfile(dev, f_x(math.max(dev.startBar, dev.endBar - hw)), dev.endBar, true)
                 array.push(doneQ, dev)
             else
                 for b in dev.boxes
@@ -946,31 +988,17 @@ f_devEligible() =>
 devEligible = f_devEligible()
 
 f_roleProfile(string role) =>
-    Profile p = na
-    if role == "DEV"
-        p := devEligible ? dev : na
-    else if role == "OV"
-        p := ov
-    else if role == "PD"
-        if not na(dev)
-            p := dev.kind == "AL" ? pdAL : dev.kind == "PM" ? pdPM : pdNY
-    else if role == "PW"
-        p := pw
+    Profile p = role == "DEV" ? (devEligible ? dev : Profile(na)) : role == "OV" ? ov : role == "PW" ? pw : Profile(na)
+    if role == "PD" and not na(dev)
+        p := dev.kind == "AL" ? pdAL : dev.kind == "PM" ? pdPM : pdNY
     p
 
 f_roleShown(string role) =>
     role == "DEV" ? showDev : role == "OV" ? showOv : role == "PD" ? showPd : showPw
 
-f_levelVal(string role, string lvl) =>
-    p = f_roleProfile(role)
-    float r = na
-    if not na(p)
-        if not na(p.poc)
-            r := lvl == "VAH" ? p.vah : lvl == "POC" ? p.poc : p.val
-    r
-
-f_levelDisp(string role, string lvl) =>
-    Profile p = role == "DEV" ? dev : f_roleProfile(role)
+// disp = true returns the developing profile's levels even before it is eligible (drawing only)
+f_levelVal(string role, string lvl, bool disp) =>
+    Profile p = disp and role == "DEV" ? dev : f_roleProfile(role)
     float r = na
     if not na(p)
         if not na(p.poc)
@@ -982,8 +1010,8 @@ var array<string> vpLvls  = array.from("VAH", "POC", "VAL")
 
 // Location relative to the active reference profile (DEV once eligible, else OV).
 refRole = devEligible ? "DEV" : "OV"
-refVah = f_levelVal(refRole, "VAH")
-refVal = f_levelVal(refRole, "VAL")
+refVah = f_levelVal(refRole, "VAH", false)
+refVal = f_levelVal(refRole, "VAL", false)
 vpLocation = na(refVah) ? "No profile yet" : close > refVah ? "Above " + refRole + " VAH" : close < refVal ? "Below " + refRole + " VAL" : "Inside " + refRole + " value"
 
 // ── VP context: cross → rotation (re-entry / POC) or continuation (breakout) ──
@@ -996,10 +1024,10 @@ if confirmed and useVp
     for role in vpRoles
         if f_roleShown(role)
             for lvl in vpLvls
-                L = f_levelVal(role, lvl)
+                L = f_levelVal(role, lvl, false)
                 // session-open bar: DEV is not eligible yet, OV carries the finished profile's previous values, PD / PW are static
                 Lp = (newVpSession and (role == "PD" or role == "PW")) or (newWeek and role == "PW") ? L : array.get(vpPrevL, f_lvlIdx(role, lvl))
-                if not na(L) and not na(Lp) and (not newVpSession or role != "DEV")
+                if not na(L) and not na(Lp) and (not newVpSession or role != "DEV") and not (lunchQuiet and lunchNow)
                     up = close > L and close[1] <= math.min(L, Lp)
                     dn = close < L and close[1] >= math.max(L, Lp)
                     if (up or dn) and (na(bestL) or (up ? L > bestL : L < bestL))
@@ -1024,7 +1052,7 @@ if confirmed and useVp
     if st.vpDir != 0 and st.vpModel != "" and st.vpModelBar < bar_index
         st.vpModel := ""
     if st.vpDir != 0 and st.vpModel == ""
-        L = f_levelVal(st.vpRole, st.vpLevel)
+        L = f_levelVal(st.vpRole, st.vpLevel, false)
         d = st.vpDir
         if na(L) or bar_index - st.vpBar > vpWindow or (d == 1 ? close < L - atr : close > L + atr)
             f_vpReset()
@@ -1048,7 +1076,7 @@ if confirmed and useVp
                     st.vpModelExt := st.holdExt
     for role in vpRoles
         for lvl in vpLvls
-            array.set(vpPrevL, f_lvlIdx(role, lvl), f_levelVal(role, lvl))
+            array.set(vpPrevL, f_lvlIdx(role, lvl), f_levelVal(role, lvl, false))
 
 
 newDay = not na(pdTime) and (na(pdTime[1]) or pdTime != pdTime[1])
@@ -1132,10 +1160,12 @@ if confirmed
         sameIdea = st.swDir == newDir and st.reactOK and (newDir == 1 ? low > st.swExt : high < st.swExt)
         keepExt = st.swDir == -newDir and st.swExternal and st.reactOK and not (hiSweep ? sweepHiExt : sweepLoExt)
         if not sameIdea and not keepExt
+            // an internal re-sweep deeper than a live external sweep extends that external idea instead of demoting it
+            extendExt = st.swDir == newDir and st.swExternal and not (hiSweep ? sweepHiExt : sweepLoExt)
             st.swDir := newDir
-            st.swExternal := hiSweep ? sweepHiExt : sweepLoExt
-            st.swName := newName
-            st.swLevel := newLvl
+            st.swExternal := (hiSweep ? sweepHiExt : sweepLoExt) or extendExt
+            st.swName := extendExt ? st.swName : newName
+            st.swLevel := extendExt ? st.swLevel : newLvl
             st.swExt := hiSweep ? high : low
             st.swBar := bar_index
             st.reactOK := false
@@ -1149,24 +1179,36 @@ if confirmed
             st.brkOK := false
             st.brkUsed := false
             st.oteUsed := false
+            st.swUsed := false
+            st.legExtBar := bar_index
         sweepEvent := true
         if useSweepMk
             array.push(sweepMarks, label.new(bar_index, hiSweep ? high : low, "", style = label.style_circle, color = color.new(hiSweep ? bearCol : bullCol, (hiSweep ? sweepHiExt : sweepLoExt) ? 30 : 65), size = (hiSweep ? sweepHiExt : sweepLoExt) ? size.small : size.tiny, tooltip = "Sweep · " + newName + " · " + f_price(newLvl)))
             while array.size(sweepMarks) > 60
                 label.delete(array.shift(sweepMarks))
+    // ── Trade-idea extreme: always the lowest / highest print since the sweep. A deeper print re-bases the idea:
+    //    new displacement and structure shift required, a pending plan expires, an active plan keeps its stop ──
+    if (st.swDir == 1 or st.swDir == -1) and sweepEvent == false
+        dx = st.swDir
+        if (dx == 1 ? low < st.swExt : high > st.swExt) and st.plState != 2
+            st.swOpp := dx == 1 ? oppHi : oppLo
+            st.swOppBar := dx == 1 ? oppHiBar : oppLoBar
+            st.mssOK := false
+            st.brkOK := false
+            st.oteUsed := false
+            st.reactOK := false
+            st.reactType := ""
+            st.swBar := bar_index
+            st.legExt := dx == 1 ? high : low
+            st.legExtBar := bar_index
+            st.swUsed := false
+            st.rebaseBar := bar_index
+        st.swExt := dx == 1 ? math.min(st.swExt, low) : math.max(st.swExt, high)
     // ── Step 4: displacement / sharp reversal in the working direction (sweep first, else VP context) ──
     ctxDir = (st.swDir == 1 or st.swDir == -1) ? st.swDir : st.vpDir
     if ctxDir != 0 and (not st.reactOK or st.reactDir != ctxDir or st.reactType == "Sharp Reversal")
         d = ctxDir
         fresh = not st.reactOK or st.reactDir != d
-        if st.swDir == d and fresh
-            if (d == 1 ? low < st.swExt : high > st.swExt)
-                // a deeper sweep: the highs / lows printed since the first sweep become the structure to shift
-                st.swOpp := d == 1 ? oppHi : oppLo
-                st.swOppBar := d == 1 ? oppHiBar : oppLoBar
-                st.mssOK := false
-                st.brkOK := false
-            st.swExt := d == 1 ? math.min(st.swExt, low) : math.max(st.swExt, high)
         isDisp = bodySz >= dispAtr * atr and rangeSz > 0 and bodySz / rangeSz >= 0.5 and (d == 1 ? close > open and close > high[1] : close < open and close < low[1])
         lowerWick = math.min(open, close) - low
         upperWick = high - math.max(open, close)
@@ -1186,6 +1228,8 @@ if confirmed
     if (st.swDir == 1 or st.swDir == -1) and not st.mssOK and not na(st.swOpp)
         if (st.swDir == 1 ? close > st.swOpp : close < st.swOpp)
             st.mssOK := true
+            st.mssBar := bar_index
+            st.mssInWin := inKzAm or inKzPm or inSbAm or inSbPm
             // breaker block: the last candle that closed in the old direction at the swing the shift just broke
             k0 = math.max(0, bar_index - nz(st.swOppBar, bar_index))
             st.brkOK := false
@@ -1200,9 +1244,11 @@ if confirmed
     // a breaker that price closes through against the idea has failed
     if st.brkOK and (st.swDir == 1 ? close < st.brkBot : close > st.brkTop)
         st.brkOK := false
-    // ── Displacement leg: farthest print since the sweep ──
+    // ── Displacement leg: farthest print since the sweep (and the bar that printed it) ──
     if st.swDir == 1 or st.swDir == -1
-        st.legExt := st.swDir == 1 ? math.max(nz(st.legExt, high), high) : math.min(nz(st.legExt, low), low)
+        newLeg = st.swDir == 1 ? math.max(nz(st.legExt, high), high) : math.min(nz(st.legExt, low), low)
+        st.legExtBar := newLeg != st.legExt ? bar_index : st.legExtBar
+        st.legExt := newLeg
     // ── Context expiry / invalidation ──
     if st.swDir != 0
         aged = bar_index - st.swBar
@@ -1245,8 +1291,9 @@ var array<label> smtLabels = array.new<label>()
 f_smtDraw(int x1, float y1, int x2, float y2, string who, int dir) =>
     if useSmt
         c = dir == 1 ? bullCol : bearCol
-        array.push(smtLines, line.new(x1, y1, x2, y2, color = c, width = 2))
-        array.push(smtLabels, label.new(int((x1 + x2) / 2), (y1 + y2) / 2, (dir == 1 ? "Bullish SMT · " : "Bearish SMT · ") + who, style = label.style_none, textcolor = c, size = size.small, tooltip = (dir == 1 ? "Bullish" : "Bearish") + " SMT · " + who + (dir == 1 ? "\nChart made a lower low, " : "\nChart made a higher high, ") + who + " did not"))
+        xa = f_x(x1)
+        array.push(smtLines, line.new(xa, y1, x2, y2, color = c, width = 2))
+        array.push(smtLabels, label.new(int((xa + x2) / 2), (y1 + y2) / 2, (dir == 1 ? "Bullish SMT · " : "Bearish SMT · ") + who, style = label.style_none, textcolor = c, size = size.small, tooltip = (dir == 1 ? "Bullish" : "Bearish") + " SMT · " + who + (dir == 1 ? "\nChart made a lower low, " : "\nChart made a higher high, ") + who + " did not"))
         while array.size(smtLines) > 8
             line.delete(array.shift(smtLines))
             label.delete(array.shift(smtLabels))
@@ -1319,7 +1366,7 @@ f_fvgAdd(array<Fvg> arr, float top, float bottom, int dir, int barIdx, string tf
     line ce = na
     if showCe
         ce := line.new(barIdx, (top + bottom) / 2, bar_index + 4, (top + bottom) / 2, color = color.new(dirCol, 50), style = line.style_dotted, extend = extend.none)
-    array.push(arr, Fvg.new(bx, ce, top, bottom, dir, barIdx, 0, na, tfLbl, rightSide, false, fvgSes, false, 0, -1))
+    array.push(arr, Fvg.new(bx, ce, top, bottom, dir, barIdx, 0, na, tfLbl, rightSide, false, fvgSes, false, 0, -1, inKzAm or inKzPm, inSbAm or inSbPm))
 
 f_fvgFreeze(Fvg f) =>
     if f.rightSide
@@ -1389,7 +1436,7 @@ f_htfProcess(array<Fvg> arr, array<int> opens, bool enabled, string tf, float h1
         f_fvgUpdate(arr, true, c1)
         rs = isLtf and htfPlace == "Right Side" and sec >= 900
         nOpen = array.size(opens)
-        anchor = math.max(bar_index - DRAW_REACH, nOpen >= 3 ? array.get(opens, nOpen - 3) : bar_index)   // open bar of the displacement candle, within drawing reach
+        anchor = f_x(nOpen >= 3 ? array.get(opens, nOpen - 3) : bar_index)   // open bar of the displacement candle, within drawing reach
         minH = math.max(minGap, htfMinPts)
         gapB = l1 - h3
         gapS = l3 - h1
@@ -1429,13 +1476,8 @@ if useFvg and confirmed
 f_htfTouch(array<Fvg> arr, int d) =>
     r = ""
     for f in arr
-        if f.state == 0 and f.dir == d and r == ""
-            touched = false
-            for k = 0 to 5
-                if low[k] <= f.top and high[k] >= f.bottom
-                    touched := true
-            if touched
-                r := f.tf
+        if f.state == 0 and f.dir == d and r == "" and lo6 <= f.top and hi6 >= f.bottom
+            r := f.tf
     r
 
 f_htfTouchTf(array<Fvg> arr, int d, string tf) =>
@@ -1443,16 +1485,11 @@ f_htfTouchTf(array<Fvg> arr, int d, string tf) =>
 
 f_htfAligned(int d) =>
     r = f_htfTouchTf(htf1, d, htfTf1)
-    if r == ""
-        r := f_htfTouchTf(htf2, d, htfTf2)
-    if r == ""
-        r := f_htfTouchTf(htf3, d, htfTf3)
-    if r == ""
-        r := f_htfTouchTf(htf4, d, htfTf4)
-    if r == ""
-        r := f_htfTouchTf(htf5, d, htfTf5)
-    if r == ""
-        r := f_htfTouchTf(htf6, d, htfTf6)
+    r := r != "" ? r : f_htfTouchTf(htf2, d, htfTf2)
+    r := r != "" ? r : f_htfTouchTf(htf3, d, htfTf3)
+    r := r != "" ? r : f_htfTouchTf(htf4, d, htfTf4)
+    r := r != "" ? r : f_htfTouchTf(htf5, d, htfTf5)
+    r := r != "" ? r : f_htfTouchTf(htf6, d, htfTf6)
     r
 
 // Checklist step 2: remember the first mapped 15m+ gap in the idea's direction that price touched since the sweep.
@@ -1495,7 +1532,7 @@ f_markTag(int bar, int dir, string grade, int hit, int nT, float entry, float R,
         txt = grade + (dir == 1 ? " L " : " S ") + (win ? "✓" : state == 4 ? "✗" : "○")
         c = win ? bullCol : state == 4 ? bearCol : color.gray
         tip = (shadow ? "Not saved · " + why + "\n" : "Saved idea\n") + family + " · " + model + " (" + led + ")\nEntry " + f_price(entry) + " · SL " + f_price(y) + " · R " + f_price(R) + "\nTargets hit: " + str.tostring(hit) + "/" + str.tostring(nT) + "\n" + result
-        array.push(ideaMarks, label.new(bar, y, txt, style = dir == 1 ? label.style_label_up : label.style_label_down, color = color.new(c, shadow ? 72 : 20), textcolor = shadow ? color.new(chart.fg_color, 25) : color.white, size = markSize, tooltip = tip))
+        array.push(ideaMarks, label.new(f_x(bar), y, txt, style = dir == 1 ? label.style_label_up : label.style_label_down, color = color.new(c, shadow ? 72 : 20), textcolor = shadow ? color.new(chart.fg_color, 25) : color.white, size = markSize, tooltip = tip))
         array.push(ideaMarkT, time)
         f_pruneMarks()
 
@@ -1530,9 +1567,9 @@ f_shStart(int d, float entry, float sl, float R, array<float> tps, string grade,
     sh.be := false
     sh.fvg := f
     sh.why := why
-    sh.lastVpBar := st.vpBar
-    sh.lastBrkBar := st.brkBar
-    sh.lastOteBar := st.swBar
+    sh.lastVpBar := led == "VP-led" ? st.vpBar : sh.lastVpBar
+    sh.lastBrkBar := model == "Breaker Retest" ? st.brkBar : sh.lastBrkBar
+    sh.lastOteBar := model == "OTE Retest" ? st.swBar : sh.lastOteBar
     if not na(f)
         sh.lastFvgBar := f.barIdx
         sh.lastFvgTf := f.tf
@@ -1545,16 +1582,18 @@ f_planEnd(int state, string result) =>
     st.plState := state
     st.plEndBar := bar_index
     st.lastResult := result
-    f_markIdea(state)
-    if st.plHit >= 1
-        st.nWin += 1
-    else if state == 4
-        st.nLoss += 1
-        st.coolDir := st.plDir
-        st.coolSwBar := st.swBar
-        st.coolVpBar := st.vpBar
-    else
-        st.nExp += 1
+    if state != 6
+        f_markIdea(state)
+        if st.plHit >= 1
+            st.nWin += 1
+        else if state == 4
+            st.nLoss += 1
+            st.coolDir := st.plDir
+            st.coolSwBar := st.swBar
+            st.coolVpBar := st.vpBar
+            st.swUsed := st.swDir == st.plDir ? true : st.swUsed
+        else
+            st.nExp += 1
     if state == 3
         st.nFull += 1
         f_planFreeze()
@@ -1567,10 +1606,12 @@ f_planEnd(int state, string result) =>
     if st.plLed != "VP-led"
         st.holdCount := 0
         st.holdExt := st.vpDir == 1 ? low : high
-    if state == 5 and not na(st.plFvg)
+    if (state == 5 or state == 6) and not na(st.plFvg) and result != "Expired · stop swept before entry"
         st.plFvg.used := false
 
 drawPlanNow = false
+if confirmed and st.plState == 1 and nz(st.rebaseBar, -1) == bar_index
+    f_planEnd(5, "Expired · deeper sweep before entry")
 if confirmed and (st.plState == 1 or st.plState == 2)
     d = st.plDir
     n = array.size(st.plTps)
@@ -1592,6 +1633,7 @@ if confirmed and (st.plState == 1 or st.plState == 2)
             st.plState := 2
             activatedNow := true
             drawPlanNow := true
+            st.swUsed := st.swDir == st.plDir ? true : st.swUsed
     if st.plState == 2
         if (d == 1 ? low <= st.plSl : high >= st.plSl)
             if st.plBe
@@ -1718,7 +1760,7 @@ f_stackedVp(float entry) =>
     for role in vpRoles
         if f_roleShown(role)
             for lvl in vpLvls
-                L = f_levelVal(role, lvl)
+                L = f_levelVal(role, lvl, false)
                 if not na(L) and math.abs(L - entry) <= atr * 0.5
                     cnt += 1
     cnt >= 2
@@ -1737,14 +1779,27 @@ f_protectedPivot(int d, float entry) =>
 // and that wick, else the far edge of the zone. Anything tighter than 0.25 ATR is not a structure.
 f_structStop(int d, float entry, float far) =>
     float r = na
-    lim = maxSlAtr * atr
+    lim = maxSlAtr * atrRisk
     sw  = st.swDir == d ? st.swExt : float(na)
     piv = f_protectedPivot(d, entry)
-    if not na(sw) and math.abs(entry - sw) <= lim and math.abs(entry - sw) >= 0.25 * atr
+    // re-sweep guard: an untaken level or pivot just beyond the wick is the next pool of the same sweep
+    guard = resweepAtr * atrRisk
+    deep = float(na)
+    if not na(sw) and resweepMode != "Off"
+        for s in sessions
+            lvl = d == 1 ? s.lo : s.hi
+            if s.done and (d == 1 ? not s.loTaken and lvl < sw and lvl >= sw - guard : not s.hiTaken and lvl > sw and lvl <= sw + guard)
+                deep := na(deep) ? lvl : (d == 1 ? math.min(deep, lvl) : math.max(deep, lvl))
+        for p in pivs
+            if (d == 1 ? not p.isHigh and p.price < sw and p.price >= sw - guard : p.isHigh and p.price > sw and p.price <= sw + guard)
+                deep := na(deep) ? p.price : (d == 1 ? math.min(deep, p.price) : math.max(deep, p.price))
+    sw := na(deep) ? sw : resweepMode == "Extend" ? deep : float(na)
+    st.resweepSkip := not na(deep) and resweepMode == "Skip"
+    if not na(sw) and math.abs(entry - sw) <= lim and math.abs(entry - sw) >= 0.5 * atrRisk
         r := sw
-    else if not na(piv) and math.abs(entry - piv) <= lim and math.abs(entry - piv) >= 0.25 * atr and (na(sw) or (d == 1 ? piv >= sw : piv <= sw))
+    else if not na(piv) and math.abs(entry - piv) <= lim and math.abs(entry - piv) >= 0.5 * atrRisk and (na(sw) or (d == 1 ? piv >= sw : piv <= sw))
         r := piv
-    else if not na(far) and math.abs(entry - far) <= lim and math.abs(entry - far) >= 0.25 * atr
+    else if not na(far) and math.abs(entry - far) <= lim and math.abs(entry - far) >= 0.5 * atrRisk
         r := far
     r
 
@@ -1754,7 +1809,7 @@ f_candidates(int d, float entry) =>
     for role in vpRoles
         if f_roleShown(role)
             for lvl in vpLvls
-                L = f_levelVal(role, lvl)
+                L = f_levelVal(role, lvl, false)
                 if not na(L) and (d == 1 ? L > entry : L < entry)
                     array.push(pool, L)
     for s in sessions
@@ -1829,23 +1884,26 @@ f_addPt(int pts, string txt, bool ok, string name) =>
     [pts + (ok ? 1 : 0), txt + (ok ? "✓ " : "☐ ") + name + "   "]
 
 // Confluence score, 10 points. zTop / zBot = the entry zone (na when there is none yet).
-f_score(int d, string led, float entry, float zTop, float zBot) =>
+f_score(int d, string led, float entry, float zTop, float zBot, Fvg zoneF) =>
     leg = st.swDir == d and not na(st.legExt) ? (d == 1 ? st.legExt - st.swExt : st.swExt - st.legExt) : float(na)
     swOK = st.swDir == d
-    [p1, t1] = f_addPt(0, "", swOK and st.swExternal, "External sweep")
-    [p2, t2] = f_addPt(p1, t1, swOK and st.mssOK, "MSS")
+    [p1, t1] = f_addPt(0, "", swOK and st.swExternal, (qualityFloor != "Off" ? "gate ✓ " : "") + "External sweep")
+    [p2, t2] = f_addPt(p1, t1, swOK and st.mssOK, (needMss ? "gate ✓ " : "") + "MSS")
     [p3, t3] = f_addPt(p2, t2, not na(leg) and leg >= 3 * atr, "Leg ≥ 3 ATR")
-    [p4, t4] = f_addPt(p3, t3, (swOK and st.swHtf != "") or f_htfAligned(d) != "", "HTF FVG")
+    [p4, t4] = f_addPt(p3, t3, (swOK and st.swHtf != "") or f_htfAligned(d) != "" or dayBias == d, "HTF FVG / daily bias")
     [p5, t5] = f_addPt(p4, t4, smtFresh and st.smtDir == d, "SMT")
     [p6, t6] = f_addPt(p5, t5, led == "VP-led" or st.vpDir == d, "VP aligned")
-    [p7, t7] = f_addPt(p6, t6, inKzAm or inKzPm or inSbAm or inSbPm, "Killzone / Silver Bullet")
+    zoneWin = not na(zoneF) ? ((zoneF.inKz or zoneF.inSb) and zoneF.barIdx >= st.swBar) : swOK and st.mssOK ? st.mssInWin : (inKzAm or inKzPm or inSbAm or inSbPm)
+    [p7, t7] = f_addPt(p6, t6, zoneWin, "Time (zone formed in a window)")
     [p8, t8] = f_addPt(p7, t7, not na(leg) and not na(entry) and (d == 1 ? entry <= st.legExt - 0.5 * leg : entry >= st.legExt + 0.5 * leg), d == 1 ? "Discount entry" : "Premium entry")
     [p9, t9] = f_addPt(p8, t8, swOK and st.brkOK and not na(zTop) and zTop > st.brkBot and zBot < st.brkTop, "Unicorn (breaker overlap)")
     [p10, t10] = f_addPt(p9, t9, (not na(entry) and f_stackedVp(entry)) or (st.vpDir == d and st.vpKind == "Rotation" and st.vpOpenOut == -d), "Value structure")
     [p10, t10]
 
+// points the active gates already enforce are shown as 'gate ✓' and do not count: A always means independent confluences
+freePts = (qualityFloor != "Off" ? 1 : 0) + (needMss ? 1 : 0)
 f_scoreGrade(int s) =>
-    s >= scoreAp ? "A+" : s >= scoreA ? "A" : "B"
+    s - freePts >= scoreAp ? "A+" : s - freePts >= scoreA ? "A" : "B"
 
 f_familyShort(string fam) =>
     fam == "Value Rotation" ? "Rotation" : fam == "Value Continuation" ? "Continuation" : "Inversion"
@@ -1865,13 +1923,13 @@ f_planDraw() =>
         c = st.plDir == 1 ? bullCol : bearCol
         grey = color.new(chart.fg_color, 45)
         x2 = bar_index + 17
-        st.lnEntry := line.new(st.plBar, st.plEntry, x2, st.plEntry, color = c, width = 2)
+        st.lnEntry := line.new(f_x(st.plBar), st.plEntry, x2, st.plEntry, color = c, width = 2)
         st.lbEntry := label.new(x2, st.plEntry, st.plGrade + " · " + (st.plDir == 1 ? "LONG" : "SHORT") + " · " + f_familyShort(st.plFamily) + " " + st.plModel, style = label.style_label_left, color = color.new(color.white, 100), textcolor = c, size = planSize, tooltip = "Entry " + f_price(st.plEntry) + " · " + st.plLed)
         slCol = color.new(bearCol, 15)
-        st.lnSl := line.new(st.plBar, st.plSl, x2, st.plSl, color = slCol, style = line.style_dotted)
+        st.lnSl := line.new(f_x(st.plBar), st.plSl, x2, st.plSl, color = slCol, style = line.style_dotted)
         st.lbSl := label.new(x2, st.plSl, st.plBe ? "SL · BE" : "SL", style = label.style_label_left, color = color.new(color.white, 100), textcolor = slCol, size = planSubSize, tooltip = "Stop " + f_price(st.plSl))
         for [i, tp] in st.plTps
-            array.push(st.lnTps, line.new(st.plBar, tp, x2, tp, color = grey, style = line.style_dotted))
+            array.push(st.lnTps, line.new(f_x(st.plBar), tp, x2, tp, color = grey, style = line.style_dotted))
             array.push(st.lbTps, label.new(x2, tp, "TP" + str.tostring(i + 1), style = label.style_label_left, color = color.new(color.white, 100), textcolor = grey, size = planSubSize, tooltip = "TP" + str.tostring(i + 1) + " " + f_price(tp)))
 
 f_gradeRank(string g) =>
@@ -1898,25 +1956,30 @@ f_mapBias() =>
     d6
 
 f_valueBias() =>
-    role = na(f_levelVal("OV", "VAH")) ? "PD" : "OV"
-    vh = f_levelVal(role, "VAH")
-    vl = f_levelVal(role, "VAL")
+    role = na(f_levelVal("OV", "VAH", false)) ? "PD" : "OV"
+    vh = f_levelVal(role, "VAH", false)
+    vl = f_levelVal(role, "VAL", false)
     na(vh) ? 0 : close > vh ? 1 : close < vl ? -1 : 0
 
 f_biasOK(int d) =>
-    mapD = (htfBias == "15m+ FVG map" or htfBias == "Both") ? f_mapBias() : 0
-    valD = (htfBias == "Value location (OV / PD)" or htfBias == "Both") ? f_valueBias() : 0
-    (mapD == 0 or mapD == d) and (valD == 0 or valD == d)
+    // an external sweep that already produced the shift overrides the 15m+ map: the newest 15m gap is usually the one that drove price into the liquidity
+    override = st.swDir == d and st.swExternal and st.mssOK
+    mapD = override ? 0 : (htfBias == "15m+ FVG map" or htfBias == "Map + Value") ? f_mapBias() : 0
+    valD = (htfBias == "Value location (OV / PD)" or htfBias == "Map + Value" or htfBias == "Value + Daily") ? f_valueBias() : 0
+    dayD = (htfBias == "Daily bias" or htfBias == "Value + Daily") ? dayBias : 0
+    pdS = array.get(sessions, array.size(sessions) - 1)
+    pdBlock = dayD != 0 and pdS.done and ((d == -1 and pdS.hiClosed and close > pdS.hi) or (d == 1 and pdS.loClosed and close < pdS.lo))
+    (mapD == 0 or mapD == d) and (valD == 0 or valD == d) and (dayD == 0 or dayD == d) and not pdBlock
 
-quietNow = (openQuietMin > 0 and not na(sesOpenTime) and time - sesOpenTime < openQuietMin * 60000) or (reviewQuiet > 0 and not na(twoSidedBar) and bar_index - twoSidedBar <= reviewQuiet)
-windowOK = (tradeWindow == "Any" or (tradeWindow == "Killzones" and (inKzAm or inKzPm)) or (tradeWindow == "Silver Bullet (10–11 · 14–15)" and (inSbAm or inSbPm)) or (tradeWindow == "NY AM + PM" and (array.get(inSesArr, 2) or array.get(inSesArr, 3))) or (tradeWindow == "NY AM only" and array.get(inSesArr, 2))) and not quietNow
+quietNow = (openQuietMin > 0 and not na(sesOpenTime) and time - sesOpenTime < openQuietMin * 60000) or (reviewQuiet > 0 and not na(twoSidedBar) and bar_index - twoSidedBar <= reviewQuiet) or (mocQuiet and inMoc)
+windowOK = (tradeWindow == "Any" or (tradeWindow == "Killzones" and (inKzAm or inKzPm or inLate)) or (tradeWindow == "Silver Bullet (10–11 · 14–15)" and (inSbAm or inSbPm)) or (tradeWindow == "NY AM + PM" and (array.get(inSesArr, 2) or array.get(inSesArr, 3))) or (tradeWindow == "NY AM only" and array.get(inSesArr, 2))) and not quietNow
 if drawPlanNow
     f_planDraw()
 
 cooled = coolStop and dirNow == nz(st.coolDir) and ((st.swDir == dirNow and st.swBar == nz(st.coolSwBar, -1)) or (st.vpDir == dirNow and st.vpBar == nz(st.coolVpBar, -1)))
 newPlan = false
 // a plan may be saved on this bar (save slot); otherwise a complete candidate can still be followed as a shadow idea
-saveSlot   = windowOK and not cooled and st.plState != 1 and st.plState != 2 and (nz(st.plEndBar, -1) != bar_index or (st.plState == 4 and st.plDir != dirNow))
+saveSlot   = windowOK and not cooled and st.plState != 2 and (st.plState != 1 or replacePending) and (nz(st.plEndBar, -1) != bar_index or (st.plState == 4 and st.plDir != dirNow))
 shadowSlot = shadowMode != "Off" and useIdeaMk and sh.state == 0
 
 if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or dirNow == -1)
@@ -1934,7 +1997,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
     float zBot = na
     leg = st.swDir == d and not na(st.legExt) ? (d == 1 ? st.legExt - st.swExt : st.swExt - st.legExt) : float(na)
     legOK = st.swDir != d or na(st.legExt) or leg >= legMinAtr * atr
-    paCtx = st.swDir == d and st.reactOK and (not needMss or st.mssOK) and legOK
+    paCtx = st.swDir == d and st.reactOK and (not needMss or st.mssOK) and legOK and (not oneIdeaPerSweep or not st.swUsed)
     // Price-action models (need a sweep + reaction (+ structure shift), or an aligned VP context)
     if paCtx or st.vpDir == d
         since3 = math.max(ctxBar, bar_index - zoneMaxAge)
@@ -1952,7 +2015,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
         else if not na(f2) and paCtx
             model := "IFVG Close"
             usedFvg := f2
-        else if not na(f3) and (paCtx or (st.reactOK and st.reactDir == d))
+        else if not na(f3) and (paCtx or (st.swDir != d and st.reactOK and st.reactDir == d and legOK))
             model := "FVG Retest"
             usedFvg := f3
         if model != ""
@@ -1966,7 +2029,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
             basis := usedFvg.tf + " FVG"
             liveNow := not ifvgPend and (model == "IFVG Close" or entryRefIn == "Confirmation Close" or (d == 1 ? low <= entry : high >= entry))
         // Breaker Retest: the failed order block at the broken swing is retested and price closes back beyond it
-        if model == "" and useBreaker and paCtx and st.brkOK and not st.brkUsed and bar_index > st.brkBar + 1
+        if model == "" and useBreaker and paCtx and st.brkOK and not st.brkUsed and bar_index > st.mssBar and (d == 1 ? low[1] > st.brkTop : high[1] < st.brkBot)
             near = d == 1 ? st.brkTop : st.brkBot
             farB = d == 1 ? st.brkBot : st.brkTop
             hitB = d == 1 ? (low <= near and close > near and (not noFullFill or low > farB)) : (high >= near and close < near and (not noFullFill or high < farB))
@@ -1975,16 +2038,15 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
                 led := "Price-action-led"
                 entry := entryRefIn == "50%" ? (st.brkTop + st.brkBot) / 2 : entryRefIn == "Far Edge" ? farB : entryRefIn == "Confirmation Close" ? close : near
                 farEdge := farB
-                zTop := st.brkTop
-                zBot := st.brkBot
                 basis := "Breaker"
                 liveNow := entryRefIn == "Confirmation Close" or (d == 1 ? low <= entry : high >= entry)
         // OTE Retest: the pullback reaches the 62–79 % retrace of the displacement leg and holds
-        if model == "" and useOte and paCtx and not st.oteUsed and not na(leg) and leg > 0
+        if model == "" and useOte and paCtx and not st.oteUsed and not na(leg) and leg > 0 and bar_index > st.legExtBar
             o62 = d == 1 ? st.legExt - 0.62 * leg : st.legExt + 0.62 * leg
             o705 = d == 1 ? st.legExt - 0.705 * leg : st.legExt + 0.705 * leg
             o79 = d == 1 ? st.legExt - 0.79 * leg : st.legExt + 0.79 * leg
-            hitO = d == 1 ? (low <= o62 and close > o79) : (high >= o62 and close < o79)
+            // the pullback enters the band from above (below) and holds; the impulse candle itself never qualifies
+            hitO = d == 1 ? (low <= o62 and close > o79 and low > st.swExt and high[1] > o62) : (high >= o62 and close < o79 and high < st.swExt and low[1] < o62)
             if hitO
                 model := "OTE Retest"
                 led := "Price-action-led"
@@ -1993,7 +2055,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
                 zTop := d == 1 ? o62 : o79
                 zBot := d == 1 ? o79 : o62
                 basis := "OTE 70.5 %"
-                liveNow := d == 1 ? (low <= entry and close > entry) : (high >= entry and close < entry)
+                liveNow := entryRefIn == "Confirmation Close"
         if model != ""
             ifvgPend = model == "IFVG Close" and ifvgCloseMode == "Pending at the IFVG (retest)"
             structStop := switch stopRefIn
@@ -2011,7 +2073,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
         model := st.vpModel
         led := "VP-led"
         family := "Value Rotation"
-        L0 = f_levelVal(st.vpRole, st.vpLevel)
+        L0 = f_levelVal(st.vpRole, st.vpLevel, false)
         entry := model == "VP Hold" ? close : L0
         structStop := d == 1 ? math.min(st.vpModelExt, L0) : math.max(st.vpModelExt, L0)
         basis := st.vpRole + " " + st.vpLevel
@@ -2019,27 +2081,28 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
     biasOK = model == "" or na(entry) or f_biasOK(d)
     if model != "" and not na(entry)
         // no structure within reach = no idea (unless the ATR stop is allowed): a stop nothing protects is the stop that gets hit
-        buf0 = math.max(slBufTicks * tick, slBufAtr * atr)
+        buf0 = math.max(slBufTicks * tick, math.max(slBufAtr * atrRisk, slBufLegPct / 100 * nz(leg, 0)))
         sl0 = d == 1 ? structStop - buf0 : structStop + buf0
-        noStruct = na(sl0) or (d == 1 ? sl0 >= entry - tick : sl0 <= entry + tick) or math.abs(entry - sl0) < 0.25 * atr or math.abs(entry - sl0) > maxSlAtr * atr + buf0
+        noStruct = na(sl0) or (d == 1 ? sl0 >= entry - tick : sl0 <= entry + tick) or math.abs(entry - sl0) < 0.5 * atrRisk or math.abs(entry - sl0) > maxSlAtr * atrRisk + buf0
         if noStruct and not atrFallback and stopRefIn != "ATR Stop"
             if saveSlot
-                st.lastNote := "Waiting · no structural stop within " + str.tostring(maxSlAtr) + " ATR · " + model
+                st.lastNote := st.resweepSkip ? "Waiting · next pool within " + str.tostring(resweepAtr) + " ATR · " + model : "Waiting · no structural stop within " + str.tostring(maxSlAtr) + " ATR · " + model
                 st.lastNoteBar := bar_index
                 if led == "VP-led"
-                    f_vpReset()
+                    st.vpModel := ""
+                    st.holdCount := 0
             model := ""
     if model != "" and not na(entry)
-        buf = math.max(slBufTicks * tick, slBufAtr * atr)
+        buf = math.max(slBufTicks * tick, math.max(slBufAtr * atrRisk, slBufLegPct / 100 * nz(leg, 0)))
         sl = d == 1 ? structStop - buf : structStop + buf
-        atrStop = na(sl) or (d == 1 ? sl >= entry - tick : sl <= entry + tick) or math.abs(entry - sl) < 0.25 * atr or math.abs(entry - sl) > maxSlAtr * atr + buf
+        atrStop = na(sl) or (d == 1 ? sl >= entry - tick : sl <= entry + tick) or math.abs(entry - sl) < 0.5 * atrRisk or math.abs(entry - sl) > maxSlAtr * atrRisk + buf
         if atrStop
             sl := d == 1 ? entry - slAtrMult * atr : entry + slAtrMult * atr
         R = math.abs(entry - sl)
         pri = array.new<float>()
         if family == "Value Rotation" and st.vpDir == d
-            pocL = f_levelVal(st.vpRole, "POC")
-            farL = f_levelVal(st.vpRole, d == 1 ? "VAH" : "VAL")
+            pocL = f_levelVal(st.vpRole, "POC", false)
+            farL = f_levelVal(st.vpRole, d == 1 ? "VAH" : "VAL", false)
             if not na(pocL) and (d == 1 ? pocL > entry : pocL < entry)
                 array.push(pri, pocL)
             if not na(farL) and (d == 1 ? farL > entry : farL < entry)
@@ -2048,23 +2111,27 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
         tps = f_pickTargets(d, entry, R, pri, poolA, poolB)
         while atrStop and array.size(tps) > 0 and math.abs(array.get(tps, 0) - entry) < atrMinTp1R * R
             array.shift(tps)
-        [scoreNow, ptsNow] = f_score(d, led, entry, zTop, zBot)
+        [scoreNow, ptsNow] = f_score(d, led, entry, zTop, zBot, usedFvg)
         gradeNow = gradeMode == "Confluence score" ? f_scoreGrade(scoreNow) : f_grade(d, led, entry)
         floorOK = qualityFloor == "Off" or (st.swDir == d and st.swExternal) or (qualityFloor == "External sweep or VP context" and st.vpDir == d) or (qualityFloor == "External sweep (VP-led ideas pass)" and led == "VP-led")
         gradeFloor = isPlaybook ? "B" : minGrade   // the Playbook view has no VP, so every idea is B there
         gradeOK = f_gradeRank(gradeNow) >= f_gradeRank(gradeFloor)
-        if st.ideaSes != fvgSes
-            st.ideaSes := fvgSes
+        capKey = tradeWindow == "Any" ? fvgSes : kzSeq      // one idea per killzone, or per VP session when every hour trades
+        if st.ideaSes != capKey
+            st.ideaSes := capKey
             st.ideaCount := 0
         capOK = sesIdeaCap == 0 or st.ideaCount < sesIdeaCap or (apExtra and gradeNow == "A+" and st.ideaCount < sesIdeaCap + 1)
         optOK = not needOpt or f_optConf(d)
-        canSave = saveSlot and biasOK and gradeOK and floorOK and optOK and capOK and array.size(tps) > 0
+        lateOK = not inLate or family == "Value Continuation"
+        replaceOK = st.plState != 1 or scoreNow > st.plScore
+        canSave = saveSlot and biasOK and gradeOK and floorOK and optOK and capOK and lateOK and replaceOK and array.size(tps) > 0
         if not canSave
-            if saveSlot
-                st.lastNote := array.size(tps) == 0 ? "Waiting for targets · " + model : not biasOK ? "Filtered · against HTF bias · " + htfBias : not floorOK ? "Filtered · quality floor" : not gradeOK ? "Filtered · grade " + gradeNow + " below " + gradeFloor : not optOK ? "Filtered · no HTF FVG / SMT confluence" : "Filtered · " + str.tostring(sesIdeaCap) + " idea" + (sesIdeaCap == 1 ? "" : "s") + " per session" + (apExtra ? " (A+ may add one)" : "")
+            if saveSlot and st.plState != 1
+                st.lastNote := array.size(tps) == 0 ? "Waiting for targets · " + model : not biasOK ? "Filtered · against HTF bias · " + htfBias : not floorOK ? "Filtered · quality floor" : not gradeOK ? "Filtered · grade " + gradeNow + " below " + gradeFloor : not optOK ? "Filtered · no HTF FVG / SMT confluence" : not lateOK ? "Filtered · late-session reversal" : "Filtered · " + str.tostring(sesIdeaCap) + " idea" + (sesIdeaCap == 1 ? "" : "s") + " per " + (tradeWindow == "Any" ? "session" : "killzone") + (apExtra ? " (A+ may add one)" : "")
                 st.lastNoteBar := bar_index
                 if led == "VP-led"
-                    f_vpReset()
+                    st.vpModel := ""
+                    st.holdCount := 0
             // follow the refused setup as a shadow idea (once per zone / level) so its outcome can be tagged and counted
             dupShadow = false
             if not na(usedFvg)
@@ -2072,13 +2139,16 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
             else
                 dupShadow := model == "Breaker Retest" ? st.brkBar == sh.lastBrkBar : model == "OTE Retest" ? st.swBar == sh.lastOteBar : st.vpBar == sh.lastVpBar
             if shadowSlot and array.size(tps) > 0 and not dupShadow and (shadowMode == "All grades" or gradeOK)
-                why = not saveSlot ? (st.plState == 1 or st.plState == 2 ? "a plan was already live" : not windowOK ? "outside the trading window or in a quiet period" : cooled ? "cooldown after a stop-out" : "same bar as the last result") : not biasOK ? "against the HTF bias (" + htfBias + ")" : not floorOK ? "quality floor (no external sweep)" : not gradeOK ? "grade " + gradeNow + " below " + gradeFloor : not optOK ? "no HTF FVG / SMT confluence" : "ideas-per-session cap"
+                why = not saveSlot or not replaceOK ? (st.plState == 1 or st.plState == 2 ? "a plan was already live" : not windowOK ? "outside the trading window or in a quiet period" : cooled ? "cooldown after a stop-out" : "same bar as the last result") : not biasOK ? "against the HTF bias (" + htfBias + ")" : not floorOK ? "quality floor (no external sweep)" : not gradeOK ? "grade " + gradeNow + " below " + gradeFloor : not optOK ? "no HTF FVG / SMT confluence" : not lateOK ? "late-session reversal" : "ideas-per-killzone cap"
                 f_shStart(d, entry, sl, R, tps, gradeNow, model, family, led, liveNow, usedFvg, why)
         else
             // a saved plan on the zone a shadow was following makes the shadow redundant
             if sh.state != 0 and not na(usedFvg) and not na(sh.fvg) and sh.fvg.barIdx == usedFvg.barIdx and sh.fvg.tf == usedFvg.tf
                 sh.state := 0
+            if st.plState == 1
+                f_planEnd(6, "Replaced by a stronger setup")
             st.plState := liveNow ? 2 : 1
+            st.swUsed := liveNow and st.swDir == d ? true : st.swUsed
             st.plDir := d
             st.plEntry := entry
             st.plSl := sl
@@ -2146,15 +2216,15 @@ f_drawVpLevels() =>
     if useVp
         x1 = bar_index - 50
         if not na(dev)
-            x1 := dev.startBar
+            x1 := f_x(dev.startBar)
             if useVpLabels and showDev and not na(dev.poc)
                 capTxt = "DEV - " + (dev.kind == "AL" ? "Asia/London" : dev.kind == "PM" ? "New York PM" : "New York") + " VP [live]" + (devEligible ? "" : " * " + str.tostring(dev.bars) + "/" + str.tostring(f_devNeed()) + " bars")
-                array.push(vpLbls, label.new(dev.startBar, dev.hi, capTxt, style = label.style_label_right, color = color.new(color.white, 100), textcolor = color.new(chart.fg_color, 40), size = size.tiny))
+                array.push(vpLbls, label.new(f_x(dev.startBar), dev.hi, capTxt, style = label.style_label_right, color = color.new(color.white, 100), textcolor = color.new(chart.fg_color, 40), size = size.tiny))
         x2 = bar_index + 4
         for role in vpRoles
             if f_roleShown(role)
                 for lvl in vpLvls
-                    L = f_levelDisp(role, lvl)
+                    L = f_levelVal(role, lvl, true)
                     if not na(L)
                         c = lvl == "VAH" ? vahCol : lvl == "POC" ? pocCol : valCol
                         array.push(vpLines, line.new(x1, L, x2, L, color = role == "DEV" ? c : color.new(c, 40), style = f_roleStyle(role), width = 1))
@@ -2166,7 +2236,7 @@ f_placeRight(array<Fvg> arr) =>
     for f in arr
         if f.state == 0 and f.rightSide
             xl = bar_index + math.min(htfOffset, 499)
-            xr = bar_index + math.min(htfOffset + htfWidth, 500)
+            xr = bar_index + math.min(htfOffset + htfWidth, 499)
             box.set_left(f.bx, xl)
             box.set_right(f.bx, xr)
             box.set_extend(f.bx, extend.none)
@@ -2210,7 +2280,7 @@ f_gapVis(array<Fvg> arr, array<Fvg> higher, bool on, bool ltf, float nearMult) =
             show = not covered and (gapShow == "All" ? true : gapShow == "Respected only" ? keyR : (ltf ? (live or f.traded) : (f.ses == fvgSes or near)))
             box.set_text(f.bx, f.tf + (f.state == 1 ? " IFVG" : fvgLblMode == "{tf} FVG" ? " FVG" : "") + (respected ? " ✓" : ""))
             if not f.rightSide
-                xr = live ? bar_index + 4 : math.max(bar_index - DRAW_REACH, math.min(f.barIdx + ltfShowBars, bar_index))
+                xr = live ? bar_index + 4 : f_x(math.min(f.barIdx + ltfShowBars, bar_index))
                 box.set_right(f.bx, xr)
                 if not na(f.ce)
                     line.set_x2(f.ce, xr)
@@ -2249,12 +2319,12 @@ if heavyDraw
     box.delete(brkBox)
     if showBreaker and useBreaker and useFvg and st.brkOK and (st.swDir == 1 or st.swDir == -1)
         brkC = color.new(#f1c40f, 0)
-        brkBox := box.new(math.max(st.brkBar, bar_index - DRAW_REACH), st.brkTop, bar_index + 4, st.brkBot, border_color = color.new(brkC, 55), border_width = 1, bgcolor = color.new(brkC, 86), text = "Breaker", text_size = fvgTxtSz, text_color = color.new(brkC, 15), text_halign = text.align_right, text_valign = text.align_center)
+        brkBox := box.new(f_x(st.brkBar), st.brkTop, bar_index + 4, st.brkBot, border_color = color.new(brkC, 55), border_width = 1, bgcolor = color.new(brkC, 86), text = "Breaker", text_size = fvgTxtSz, text_color = color.new(brkC, 15), text_halign = text.align_right, text_valign = text.align_center)
     f_drawVpLevels()
     if useHist and not na(dev)
         hw = f_histW(dev.kind)
         if vpPlace == "Left"
-            f_drawProfile(dev, dev.startBar, math.max(dev.startBar + 1, math.min(dev.startBar + hw, bar_index)), false)
+            f_drawProfile(dev, f_x(dev.startBar), math.max(f_x(dev.startBar) + 1, math.min(f_x(dev.startBar) + hw, bar_index)), false)
         else
             f_drawProfile(dev, bar_index + 2, bar_index + 2 + hw, false)
     for s in sessions
@@ -2352,11 +2422,11 @@ if barstate.islast
         dirTxt = planLive ? (st.plDir == 1 ? "Bull" : "Bear") : st.swDir == 2 ? "Review" : dirNow == 1 ? "Bull" : dirNow == -1 ? "Bear" : "Neutral"
         dirColor = dirTxt == "Bull" ? bullCol : dirTxt == "Bear" ? bearCol : txtCol
         scoreOn = gradeMode == "Confluence score"
-        [liveScore, livePts] = f_score(dirNow == 0 ? 1 : dirNow, "", close, float(na), float(na))
+        [liveScore, livePts] = f_score(dirNow == 0 ? 1 : dirNow, "", close, float(na), float(na), Fvg(na))
         scoreTag = scoreOn ? (planLive or resultFresh ? " · " + str.tostring(st.plScore) + "/10" : dirNow != 0 ? " · " + str.tostring(liveScore) + "/10" : "") : ""
         gradeTxt = (st.plState == 2 ? "Grade " + st.plGrade : st.plState == 1 ? "Grade " + st.plGrade + " · Pending" : resultFresh ? "Grade " + st.plGrade + (st.plState == 3 ? " · Done" : st.plState == 4 ? " · Invalid" : " · Expired") : "Ungraded") + scoreTag
         headerTip = scoreOn ? (planLive or resultFresh ? "Saved idea · " + st.plPts : dirNow != 0 ? "Live context · " + livePts : "No direction yet") : "G2S grading · A = sweep + reaction + VP alignment · A+ = A plus two confluences"
-        headerTxt = "G2S · " + dirTxt + " · " + gradeTxt + (isOrig ? " · Original" : isStrict ? " · Strict" : " · Custom")
+        headerTxt = "G2S · " + dirTxt + (dayBias != 0 ? (dayBias == 1 ? " ↑" : " ↓") : "") + " · " + gradeTxt + (isOrig ? " · Original" : isStrict ? " · Strict" : " · Custom")
         setupTxt = planLive or resultFresh ? st.plFamily : st.vpDir != 0 and st.vpDir == dirNow ? (st.vpKind == "Rotation" ? "Value Rotation" : "Value Continuation") : sweepLive ? "Liquidity Inversion" : "—"
         modelTxt = st.plState == 2 ? st.plModel + " ✓ · " + st.plLed : st.plState == 1 ? st.plModel + " · Pending · " + st.plLed : resultFresh ? st.plModel + " · " + st.lastResult : st.reactOK and st.reactDir == dirNow ? (sweepLive ? "FVG / IFVG" : "FVG Retest") + " · Pending · Price-action-led" : st.vpDir != 0 and st.vpDir == dirNow and st.vpKind == "Rotation" ? "VP Retest / Hold · Pending · VP-led" : "FVG / IFVG · Pending · Price-action-led"
         sweepTxt = st.swDir == 2 ? "Two-sided · Review" : sweepLive ? (st.swDir == 1 ? "Bull" : "Bear") + " sweep · " + st.swName : "No qualifying sweep"
