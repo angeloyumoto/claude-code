@@ -11,9 +11,9 @@ out += '''
 // ───────────────────────────── Backtest orders (strategy build only) ─────────────────────────────
 // Enters at the close of the bar on which a plan becomes ACTIVE, scales out at TP1 / TP2 / TP3 with the
 // shared stop, optionally moves the stop to breakeven after TP1, and flattens when the plan ends.
-const string G9 = "⑨ Backtest"
-btBreakeven = input.bool(true, "Move stop to breakeven after TP1", group = G9)
-btSplit     = input.bool(true, "Scale out one third at each target", group = G9)
+const string GBT = "⑩ Backtest"
+btBreakeven = input.bool(true, "Move stop to breakeven after TP1", group = GBT)
+btSplit     = input.bool(true, "Scale out one third at each target", group = GBT)
 var int btPlanBar = na
 if confirmed
     if st.plState == 2 and strategy.position_size == 0 and (na(btPlanBar) or btPlanBar != st.plBar)
