@@ -80,6 +80,7 @@ minFvgAtr    = input.float(0.25, "ATR ×", minval = 0, step = 0.05, inline = "mn
 maxFvg       = input.int(40, "Max stored FVGs", minval = 5, maxval = 60, group = G4, tooltip = "Beyond this the oldest gaps (dead ones first) are dropped. Lower it for a quieter chart.")
 fvgLblMode   = input.string("Timeframe only", "Box text", options = ["{tf} FVG", "Timeframe only"], inline = "bt", group = G4)
 fvgTextSize  = input.string("Small", "size", options = ["Tiny", "Small", "Normal"], inline = "bt", group = G4)
+gapShow      = input.string("Respected only", "Show gaps", options = ["Respected only", "Relevant to the idea", "All"], group = G4, tooltip = "Respected only (default): a gap is drawn only when price has already retested it and closed back off it without filling it (a ✓ is added to its label), when it is the live plan's entry zone, or when it is fresh (formed within 'Keep small-TF gaps visible for' bars, mapped 15m+ gaps: this session) and points the way of the current idea. Untested, filled and off-direction gaps are hidden.\nRelevant to the idea: everything formed inside the current idea plus respected and plan gaps.\nAll: every stored gap.")
 ltfShowBars  = input.int(20, "Keep small-TF gaps visible for (bars)", minval = 5, group = G4, tooltip = "Chart-timeframe and 3m / 5m gaps are drawn only while they matter: formed inside the current trade idea, used by the live plan, inverted under the live sweep, or younger than this many bars. Everything else is hidden; a gap that served a past idea stays as a short block. 15m-and-higher gaps keep their long blocks (dimmed when price is far).")
 fvgBullCol   = input.color(color.new(#26a69a, 88), "Bull", inline = "fc", group = G4)
 fvgBearCol   = input.color(color.new(#ef5350, 88), "Bear", inline = "fc", group = G4)
@@ -404,6 +405,8 @@ type Fvg
     bool   used
     int    ses          // VP session counter when the gap formed (older-session gaps are dimmed until price returns)
     bool   traded       // a plan was saved from this gap (kept visible as a short block for review)
+    int    resp         // respected retests: touched the near edge, closed back off it, no full fill
+    int    lastTouch
 
 type Profile
     string kind
@@ -1316,7 +1319,7 @@ f_fvgAdd(array<Fvg> arr, float top, float bottom, int dir, int barIdx, string tf
     line ce = na
     if showCe
         ce := line.new(barIdx, (top + bottom) / 2, bar_index + 4, (top + bottom) / 2, color = color.new(dirCol, 50), style = line.style_dotted, extend = extend.none)
-    array.push(arr, Fvg.new(bx, ce, top, bottom, dir, barIdx, 0, na, tfLbl, rightSide, false, fvgSes, false))
+    array.push(arr, Fvg.new(bx, ce, top, bottom, dir, barIdx, 0, na, tfLbl, rightSide, false, fvgSes, false, 0, -1))
 
 f_fvgFreeze(Fvg f) =>
     if f.rightSide
@@ -1401,6 +1404,26 @@ f_htfProcess(htf3, htfOpen3, htfOn3, htfTf3, h1c, l1c, c1c, h2c, l2c, c2c, h3c, 
 f_htfProcess(htf4, htfOpen4, htfOn4, htfTf4, h1d, l1d, c1d, h2d, l2d, c2d, h3d, l3d, t1d)
 f_htfProcess(htf5, htfOpen5, htfOn5, htfTf5, h1e, l1e, c1e, h2e, l2e, c2e, h3e, l3e, t1e)
 f_htfProcess(htf6, htfOpen6, htfOn6, htfTf6, h1f, l1f, c1f, h2f, l2f, c2f, h3f, l3f, t1f)
+
+// Respect pass: a zone is "respected" when a chart bar comes from outside, taps its near edge, stays inside it and
+// closes back off it. Active gaps hold from f.dir; an inverted gap (IFVG) holds from the opposite side.
+f_respectPass(array<Fvg> arr) =>
+    for f in arr
+        if f.state != 2 and bar_index > f.barIdx + 1 and f.lastTouch != bar_index
+            zd = f.state == 1 ? -f.dir : f.dir
+            held = zd == 1 ? (low <= f.top and close > f.top and low > f.bottom and low[1] > f.top) : (high >= f.bottom and close < f.bottom and high < f.top and high[1] < f.bottom)
+            if held
+                f.resp += 1
+                f.lastTouch := bar_index
+
+if useFvg and confirmed
+    f_respectPass(fvgs)
+    f_respectPass(htf1)
+    f_respectPass(htf2)
+    f_respectPass(htf3)
+    f_respectPass(htf4)
+    f_respectPass(htf5)
+    f_respectPass(htf6)
 
 // HTF confluence: price inside (or just reacted from) an active HTF gap in direction d.
 f_htfTouch(array<Fvg> arr, int d) =>
@@ -2180,8 +2203,12 @@ f_gapVis(array<Fvg> arr, array<Fvg> higher, bool on, bool ltf, float nearMult) =
             planGap = plLive and f_isPlanGap(f)
             inIdea = dirNow != 0 and ((f.state == 0 and f.dir == dirNow and f.barIdx >= ctxBar) or (f.state == 1 and f.dir == -dirNow and swLive and f.invBar >= st.swBar))
             young = bar_index - f.barIdx <= ltfShowBars
-            live = not ltf or planGap or inIdea or young
-            show = not covered and (ltf ? (live or f.traded) : (f.ses == fvgSes or near))
+            respected = f.resp >= 1
+            freshR = inIdea and (ltf ? (young or (f.state == 1 and bar_index - f.invBar <= ltfShowBars)) : f.ses == fvgSes)
+            keyR = planGap or respected or freshR
+            live = gapShow == "Respected only" ? keyR : (not ltf or planGap or inIdea or young)
+            show = not covered and (gapShow == "All" ? true : gapShow == "Respected only" ? keyR : (ltf ? (live or f.traded) : (f.ses == fvgSes or near)))
+            box.set_text(f.bx, f.tf + (f.state == 1 ? " IFVG" : fvgLblMode == "{tf} FVG" ? " FVG" : "") + (respected ? " ✓" : ""))
             if not f.rightSide
                 xr = live ? bar_index + 4 : math.max(bar_index - DRAW_REACH, math.min(f.barIdx + ltfShowBars, bar_index))
                 box.set_right(f.bx, xr)
