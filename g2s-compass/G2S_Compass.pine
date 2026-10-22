@@ -436,7 +436,7 @@ f_edgeFlush() =>
             txt = ""
             tip = ""
             cnt = 0
-            while j < n and array.get(edgeP, array.get(idx, j)) - array.get(edgeP, array.get(idx, i)) <= labelMergeAtr * atr
+            while j < n and (j == i or array.get(edgeP, array.get(idx, j)) - array.get(edgeP, array.get(idx, i)) <= labelMergeAtr * nz(atr))
                 k = array.get(idx, j)
                 bestK := array.get(edgePr, k) < array.get(edgePr, bestK) ? k : bestK
                 txt := cnt < 3 ? (txt == "" ? array.get(edgeT, k) : txt + " · " + array.get(edgeT, k)) : cnt == 3 ? txt + " +" : txt
@@ -843,8 +843,8 @@ f_sesUpdate(Ses s, bool inNow, bool isNewDay) =>
 
 // Internal (confirmed pivot) liquidity
 var array<Piv> pivs = array.new<Piv>()
-ph = ta.pivothigh(high, pivLen, pivLen)
-pl = ta.pivotlow(low, pivLen, pivLen)
+pivHi = ta.pivothigh(high, pivLen, pivLen)
+pivLo = ta.pivotlow(low, pivLen, pivLen)
 
 f_pivAdd(float price, int bar, bool isHigh) =>
     nw = Piv.new(price, bar, isHigh, false, price, 1)
@@ -891,7 +891,7 @@ f_pivScan() =>
 
 // Run of candles closing into the swept extreme: [CISD level = open of the run's first candle, run high, run low, run length]
 f_cisd(int d) =>
-    k = (d == 1 ? close > open : close < open) ? 1 : 0
+    k = (d == 1 ? close < open : close > open) ? 0 : 1
     lvl = float(na)
     hi = float(na)
     lo = float(na)
@@ -1274,10 +1274,10 @@ if confirmed
             sweepLoName := s.isPd ? "PDL" : s.name + " Low"
             sweepLoLvl := s.lo
     if useInternal
-        if not na(ph)
-            f_pivAdd(ph, bar_index - pivLen, true)
-        if not na(pl)
-            f_pivAdd(pl, bar_index - pivLen, false)
+        if not na(pivHi)
+            f_pivAdd(pivHi, bar_index - pivLen, true)
+        if not na(pivLo)
+            f_pivAdd(pivLo, bar_index - pivLen, false)
 
 intHiSw = false
 intLoSw = false
@@ -1332,11 +1332,14 @@ if confirmed
         if not sameIdea and not keepExt
             // an internal re-sweep deeper than a live external sweep extends that external idea instead of demoting it
             extendExt = st.swDir == newDir and st.swExternal and not (hiSweep ? sweepHiExt : sweepLoExt)
+            // a same-direction sweep deeper than the wick a pending plan was built on re-bases that plan too (see the expiry before the lifecycle step)
+            if st.plState == 1 and st.plDir == newDir and st.swDir == newDir and (newDir == 1 ? low < st.swExt : high > st.swExt)
+                st.rebaseBar := bar_index
             st.swDir := newDir
             st.swExternal := (hiSweep ? sweepHiExt : sweepLoExt) or (hiSweep ? intHiEq : intLoEq) or extendExt
             st.swName := extendExt ? st.swName : newName
             st.swLevel := extendExt ? st.swLevel : newLvl
-            st.swExt := hiSweep ? high : low
+            st.swExt := extendExt ? (hiSweep ? math.max(nz(st.swExt, high), high) : math.min(nz(st.swExt, low), low)) : (hiSweep ? high : low)
             st.swBar := bar_index
             st.reactOK := false
             st.reactType := ""
@@ -1763,22 +1766,24 @@ f_lifeStep(Life L, bool useFill) =>
         L.touched := L.touched or (d == 1 ? low <= L.entry : high >= L.entry)
         held = not useFill or not confirmFill or (d == 1 ? close > L.entry + confirmDistAtr * atrRisk : close < L.entry - confirmDistAtr * atrRisk)
         ceLvl = (L.zTop + L.zBot) / 2
-        if useFill and ceDowngrade and not na(L.zTop) and not na(L.far) and not L.ceHit and (d == 1 ? low <= ceLvl : high >= ceLvl)
+        if useFill and ceDowngrade and not na(L.zTop) and not na(L.far) and not L.ceHit and (d == 1 ? L.entry > ceLvl and low <= ceLvl : L.entry < ceLvl and high >= ceLvl)
             L.ceHit := true
             L.entry := ceLvl
             L.sl := d == 1 ? L.far - L.buf : L.far + L.buf
             L.R := math.abs(L.entry - L.sl)
         zoneFail = useFill and confirmFill and not na(L.far) and (d == 1 ? close < L.far : close > L.far)
         ceFail = useFill and ceDowngrade and L.ceHit and (d == 1 ? close < ceLvl : close > ceLvl)
+        // a retest wick through the far edge of an FVG / IFVG zone is a full fill: no entry (④ 'Retest must not fill the whole gap')
+        fullFill = useFill and noFullFill and not na(L.far) and not na(L.fvg) and (d == 1 ? low < L.far : high > L.far)
         if bar_index - L.bar > pendingBars
             endState := 5
             result := "Expired · no activation"
         else if (d == 1 ? low <= L.sl : high >= L.sl)
             endState := useFill and confirmFill ? 5 : 4
             result := useFill and confirmFill ? "Expired · stop swept before entry" : "Setup Invalid · SL before activation"
-        else if zoneFail or ceFail
+        else if zoneFail or ceFail or fullFill
             endState := 5
-            result := "Expired · zone failed before entry"
+            result := fullFill ? "Expired · full fill before entry" : "Expired · zone failed before entry"
         else if L.touched and held
             L.confirmN += 1
             if L.confirmN >= (useFill ? confirmBars : 1)
@@ -1876,6 +1881,10 @@ f_planEnd(int state, string result) =>
     st.plState := state
     st.plEndBar := bar_index
     st.lastResult := result
+    if state == 6
+        // the replaced plan never had an outcome: it is not an idea for the stats or the per-killzone cap
+        st.nPlans -= 1
+        st.ideaCount := math.max(0, st.ideaCount - 1)
     if state != 6
         f_markIdea(state)
         if st.plHit >= 1
@@ -1900,7 +1909,7 @@ f_planEnd(int state, string result) =>
     if st.plLed != "VP-led"
         st.holdCount := 0
         st.holdExt := st.vpDir == 1 ? low : high
-    if (state == 5 or state == 6) and not na(st.plFvg) and result != "Expired · stop swept before entry"
+    if (state == 5 or state == 6) and not na(st.plFvg) and result != "Expired · stop swept before entry" and result != "Expired · full fill before entry"
         st.plFvg.used := false
 
 f_planBe() =>
@@ -1912,8 +1921,8 @@ f_planBe() =>
 
 drawPlanNow = false
 // a deeper print re-based the sweep, or the leg an OTE plan was measured from has extended: the pending plan is stale
-if confirmed and st.plState == 1 and (nz(st.rebaseBar, -1) == bar_index or (st.plModel == "OTE Retest" and not na(st.plLegExt) and st.plLegExt != st.legExt))
-    f_planEnd(5, nz(st.rebaseBar, -1) == bar_index ? "Expired · deeper sweep before entry" : "Expired · leg extended")
+if confirmed and st.plState == 1 and ((nz(st.rebaseBar, -1) == bar_index and st.plDir == st.swDir) or (st.plModel == "OTE Retest" and not na(st.plLegExt) and st.plLegExt != st.legExt))
+    f_planEnd(5, nz(st.rebaseBar, -1) == bar_index and st.plDir == st.swDir ? "Expired · deeper sweep before entry" : "Expired · leg extended")
 if confirmed and (st.plState == 1 or st.plState == 2)
     pl.state := st.plState
     pl.dir := st.plDir
@@ -1931,6 +1940,7 @@ if confirmed and (st.plState == 1 or st.plState == 2)
     pl.touched := st.plTouched
     pl.confirmN := st.plConfirmN
     pl.ceHit := st.plCeHit
+    pl.fvg := st.plFvg
     beBefore = st.plBe
     [es, res, act] = f_lifeStep(pl, true)
     st.plState := pl.state
@@ -2062,7 +2072,9 @@ f_structStop(int d, float entry, float far) =>
                 deep := na(deep) ? p.price : (d == 1 ? math.min(deep, p.price) : math.max(deep, p.price))
     sw := na(deep) ? sw : resweepMode == "Extend" ? deep : float(na)
     st.resweepSkip := not na(deep) and resweepMode == "Skip"
-    if not na(sw) and math.abs(entry - sw) <= lim and math.abs(entry - sw) >= 0.5 * atrRisk
+    if st.resweepSkip
+        r := float(na)      // Skip: the idea waits until the next pool is taken
+    else if not na(sw) and math.abs(entry - sw) <= lim and math.abs(entry - sw) >= 0.5 * atrRisk
         r := sw
     else if not na(piv) and math.abs(entry - piv) <= lim and math.abs(entry - piv) >= 0.5 * atrRisk and (na(sw) or (d == 1 ? piv >= sw : piv <= sw))
         r := piv
@@ -2401,7 +2413,8 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
         if st.ideaSes != capKey
             st.ideaSes := capKey
             st.ideaCount := 0
-        capOK = sesIdeaCap == 0 or st.ideaCount < sesIdeaCap or (apExtra and gradeNow == "A+" and st.ideaCount < sesIdeaCap + 1)
+        cntNow = st.ideaCount - (st.plState == 1 ? 1 : 0)      // a pending plan this candidate may replace frees its own slot
+        capOK = sesIdeaCap == 0 or cntNow < sesIdeaCap or (apExtra and gradeNow == "A+" and cntNow < sesIdeaCap + 1)
         optOK = not needOpt or f_optConf(d)
         lateOK = not inLate or family == "Value Continuation" or (st.trendDir != 0 and st.trendDir == d)
         trendOK = trendLock != "Block reversals" or family != "Liquidity Inversion" or st.trendDir == 0 or st.trendDir == d
@@ -2419,7 +2432,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
             if not na(usedFvg)
                 dupShadow := usedFvg.barIdx == sh.lastFvgBar and usedFvg.tf == sh.lastFvgTf
             else
-                dupShadow := model == "Breaker Retest" ? st.brkBar == sh.lastBrkBar : model == "OTE Retest" ? st.swBar == sh.lastOteBar : st.vpBar == sh.lastVpBar
+                dupShadow := (st.plState == 1 and st.plModel == model) or (model == "Breaker Retest" ? st.brkBar == sh.lastBrkBar : model == "OTE Retest" ? st.swBar == sh.lastOteBar : st.vpBar == sh.lastVpBar)
             if shadowSlot and array.size(tps) > 0 and not dupShadow and (shadowMode == "All grades" or gradeOK)
                 why = not saveSlot or not replaceOK ? (st.plState == 1 or st.plState == 2 ? "a plan was already live" : not windowOK ? "outside the trading window or in a quiet period" : cooled ? "cooldown after a stop-out" : "same bar as the last result") : not biasOK ? "against the HTF bias (" + htfBias + ")" : not floorOK ? "quality floor (no external sweep)" : not gradeOK ? "grade " + gradeNow + " below " + gradeFloor : not optOK ? "no HTF FVG / SMT confluence" : not lateOK ? "late-session reversal" : not trendOK ? "trend day" : "ideas-per-killzone cap"
                 f_shStart(d, entry, sl, R, tps, gradeNow, model, family, led, liveNow, usedFvg, why, farEdge, zTop, zBot, buf)
@@ -2502,7 +2515,7 @@ f_drawVpLevels() =>
         line.delete(ln)
     array.clear(vpLines)
     if useVp
-        x1 = bar_index - 50
+        x1 = f_x(bar_index - 50)
         if not na(dev)
             x1 := f_x(math.max(dev.startBar, bar_index - levelLookback))
         x2 = bar_index + 5
@@ -2792,9 +2805,8 @@ if barstate.islast
             macroRow := r + 10
             nextRow = r + 11
             if clLayout == "Full" and (planLive or (resultFresh and st.plState == 3))
-                R = math.abs(st.plEntry - st.plSl)
                 for [i, tp] in st.plTps
-                    f_row(nextRow, "TP" + str.tostring(i + 1) + (i < st.plHit ? " ✓" : ""), f_price(tp) + " · " + str.tostring(math.abs(tp - st.plEntry) / R, "#.##") + "R", txtCol)
+                    f_row(nextRow, "TP" + str.tostring(i + 1) + (i < st.plHit ? " ✓" : ""), f_price(tp) + " · " + str.tostring(math.abs(tp - st.plEntry) / st.plR, "#.##") + "R", txtCol)
                     nextRow += 1
             if showStats
                 table.cell(cl, 0, nextRow, statsTxt, text_color = dimCol, text_size = panelSize, text_halign = text.align_left)
