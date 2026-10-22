@@ -1154,7 +1154,8 @@ f_devEligible() =>
 devEligible = f_devEligible()
 
 f_roleProfile(string role) =>
-    Profile p = role == "DEV" ? (devEligible ? dev : Profile(na)) : role == "OV" ? ov : role == "PW" ? pw : Profile(na)
+    Profile p = na
+    p := role == "DEV" ? (devEligible ? dev : na) : role == "OV" ? ov : role == "PW" ? pw : na
     if role == "PD" and not na(dev)
         p := dev.kind == "AL" ? pdAL : dev.kind == "PM" ? pdPM : pdNY
     p
@@ -2744,7 +2745,8 @@ if barstate.islast
         dirTxt = planLive ? (st.plDir == 1 ? "Bull" : "Bear") : st.swDir == 2 ? "Review" : dirNow == 1 ? "Bull" : dirNow == -1 ? "Bear" : "Neutral"
         dirColor = dirTxt == "Bull" ? bullCol : dirTxt == "Bear" ? bearCol : txtCol
         scoreOn = gradeMode == "Confluence score"
-        [liveScore, livePts] = f_score(dirNow == 0 ? 1 : dirNow, "", close, float(na), float(na), Fvg(na))
+        Fvg noGap = na
+        [liveScore, livePts] = f_score(dirNow == 0 ? 1 : dirNow, "", close, float(na), float(na), noGap)
         scoreTag = scoreOn ? (planLive or resultFresh ? " · " + str.tostring(st.plScore) + "/11" : dirNow != 0 ? " · " + str.tostring(liveScore) + "/11" : "") : ""
         gradeTxt = (st.plState == 2 ? "Grade " + st.plGrade : st.plState == 1 ? "Grade " + st.plGrade + " · Pending" : resultFresh ? "Grade " + st.plGrade + (st.plState == 3 ? " · Done" : st.plState == 4 ? " · Invalid" : " · Expired") : "Ungraded") + scoreTag
         headerTip = scoreOn ? (planLive or resultFresh ? "Saved idea · " + st.plPts : dirNow != 0 ? "Live context · " + livePts : "No direction yet") : "G2S grading · A = sweep + reaction + VP alignment · A+ = A plus two confluences"
