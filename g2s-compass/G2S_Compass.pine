@@ -30,7 +30,7 @@ viewPreset   = input.string("Compass · Complete", "G2S View", options = ["Compa
 clLayout     = input.string("Compact", "Checklist", options = ["Full", "Compact", "Minimal", "Mobile", "Off"], inline = "cl", group = G1)
 clPosIn      = input.string("Auto", "at", options = ["Auto", "Top Right", "Top Left", "Bottom Right", "Bottom Left"], inline = "cl", group = G1, tooltip = "Full: numbered 1–6 checklist + detail rows + TP list.\nCompact: the detail rows only (as in the original).\nMinimal: Entry Model · Status · Macro.\nMobile: 5 short rows, defaults to bottom-right and hides the liquidity panel.\nMinimal and Mobile also hide lower-timeframe gaps covered by a bigger gap (④ 'Auto').\nAuto location = top-right (bottom-right for Mobile).")
 drawMode     = input.string("Present", "Mode", options = ["Present", "Historical"], inline = "md", group = G1)
-presentBars  = input.int(500, "bars", minval = 100, maxval = 2000, inline = "md", group = G1, tooltip = "Present: only the last N bars carry drawings – older gaps, idea tags, sweep marks and SMT connectors are removed and no line or box starts further back. Historical keeps everything the budgets allow.")
+presentBars  = input.int(1500, "bars", minval = 100, maxval = 2000, inline = "md", group = G1, tooltip = "Present: only the last N bars carry drawings – older gaps, idea tags, sweep marks and SMT connectors are removed and no line or box starts further back. Historical keeps everything the budgets allow.")
 showLiqPanel = input.bool(false, "Liquidity panel", inline = "lp", group = G1)
 liqPosIn     = input.string("Bottom Right", "at", options = ["Top Right", "Top Left", "Bottom Right", "Bottom Left"], inline = "lp", group = G1, tooltip = "Which session highs / lows are still untaken (✓ = swept, ? = no completed session yet). Moves to the opposite corner if it would sit under the checklist. Hidden with the Mobile checklist and in the Value and Minimal views.")
 panelSizeIn  = input.string("Small", "Text size · panels", options = ["Tiny", "Small", "Normal"], inline = "tx", group = G1)
@@ -166,7 +166,7 @@ devMinBars = input.int(20, "DEV eligible after (bars)", minval = 1, group = G6, 
 
 // ───────────────────────────── ⑧ Trade plan ─────────────────────────────
 const string G7 = "⑧ Trade plan"
-preset      = input.string("Strict · A setups only", "Selectivity preset", options = ["Strict · A setups only", "Original · every graded setup", "Custom · inputs below"], group = G7, tooltip = "Which gates decide what becomes a saved idea (and an alert).\nStrict: grade A or better, the two killzones, external sweep (VP-led ideas pass), 15m+ HTF bias, market structure shift, 2 ATR displacement leg, no full-fill retests, two ideas per session (A+ may add one), cooldown and quiet periods, IFVG Close pending at the zone.\nOriginal: what the invite-only script does – every complete model saves as B or better, any session, internal sweeps count, no bias / confluence / leg / structure-shift gates, no cap, IFVG Close enters at the close. Expect many more ideas and the lower win rate that comes with them.\nCustom: the individual inputs below. Stops, targets, breakeven and the drawings are the same in every preset.")
+preset      = input.string("Balanced · A setups, NY hours", "Selectivity preset", options = ["Balanced · A setups, NY hours", "Strict · A setups only", "Original · every graded setup", "Custom · inputs below"], group = G7, tooltip = "Which gates decide what becomes a saved idea (and an alert).\nBalanced (default): grade A or better (3 independent confluences), NY AM 09:30–12:00 and PM 13:30–16:00, external sweep OR a VP-level cross in the idea's direction, structure shift, 1.5 ATR displacement leg, two ideas per session (A+ may add one), one confirming close, a second idea per sweep allowed, trend day as a score point only.\nStrict: grade A or better, the two killzones, external sweep (VP-led ideas pass), 15m+ HTF bias, market structure shift, 2 ATR displacement leg, no full-fill retests, two ideas per session (A+ may add one), cooldown and quiet periods, IFVG Close pending at the zone.\nOriginal: what the invite-only script does – every complete model saves as B or better, any session, internal sweeps count, no bias / confluence / leg / structure-shift gates, no cap, IFVG Close enters at the close. Expect many more ideas and the lower win rate that comes with them.\nCustom: the individual inputs below. Stops, targets, breakeven and the drawings are the same in every preset.")
 gradeMode   = input.string("Confluence score", "Grading", options = ["Confluence score", "G2S original (VP alignment)"], inline = "gm", group = G7)
 scoreA      = input.int(3, "A at", minval = 1, maxval = 10, inline = "gm", group = G7)
 scoreAp     = input.int(5, "A+ at", minval = 2, maxval = 10, inline = "gm", group = G7, tooltip = "Confluence score (default): every complete setup collects up to 10 points – external sweep, market structure shift, strong displacement leg (≥ 3 ATR), HTF FVG, SMT, VP alignment, killzone / Silver Bullet time, discount / premium entry (≥ 50 % retrace of the leg), Unicorn (entry zone overlapping the breaker block), value structure (stacked VP levels or an open outside value rotating back). A = at least 'A at' points, A+ = at least 'A+ at'. The header shows the live score and its hover text lists the points.\nG2S original: A = sweep + reaction AND VP alignment, A+ = A plus two confluences, as the invite-only script grades.")
@@ -191,7 +191,7 @@ minTp1R     = input.float(1.0, "TP1 minimum (R)", minval = 0.25, step = 0.25, in
 tpSepR      = input.float(0.25, "separation (R)", minval = 0.1, step = 0.05, inline = "tp", group = G7, tooltip = "Targets (max 3, nearest first) come from VP levels, untaken session highs / lows, pivots and opposing FVG edges. Every target must be at least 'TP1 minimum' R away, and targets closer than 'separation' R to one already chosen are skipped. No valid target = no plan.")
 pendingBars = input.int(40, "Pending expires after (bars)", minval = 5, maxval = 1000, inline = "lf", group = G7)
 planMaxBars = input.int(150, "active times out after", minval = 10, maxval = 2000, inline = "lf", group = G7, tooltip = "Pending: bars a retest plan waits for price to reach the entry. Active: bars an entered plan may run without reaching TP1 before it is marked expired.")
-resultBars  = input.int(10, "Show result for (bars)", minval = 1, group = G7)
+resultBars  = input.int(30, "Show result for (bars)", minval = 1, group = G7, tooltip = "A finished plan stays on the chart, faded, for this many bars; its tag stays for 'Keep idea tags'.")
 minGradeIn  = input.string("A", "Minimum grade to save", options = ["B", "A", "A+"], inline = "fl", group = GS)
 qualityFloorIn = input.string("External sweep (VP-led ideas pass)", "Quality floor", options = ["Off", "External sweep or VP context", "External sweep (VP-led ideas pass)", "External sweep"], group = GS, tooltip = "Which context may become an idea. Off = any confirmed sweep, including the small internal pivots (③ length). External sweep or VP context = a session / PDH / PDL sweep, or any VP level cross in the idea's direction. External sweep (VP-led ideas pass) = price-action ideas need a live session / PDH / PDL sweep in their direction; VP Hold / VP Retest ideas pass on their own. External sweep = every idea needs the external sweep.")
 htfBiasIn    = input.string("Value location (OV / PD)", "HTF bias filter", options = ["Off", "15m+ FVG map", "Value location (OV / PD)", "Daily bias", "Value + Daily", "Map + Value"], group = GS, tooltip = "Refuse ideas against the higher-timeframe picture. 15m+ FVG map: the newest active mapped gap of 15m or higher sets the bias (none active = neutral). Value location: above the last completed value area (OV, else PD) = bull only, below = bear only, inside = neutral. Both: an idea must not oppose either. Reversal ideas often oppose the last 15m gap, so this trades frequency for alignment.")
@@ -228,8 +228,9 @@ sbAm        = input.session("1000-1100", "Silver Bullet · AM", inline = "sb", g
 sbPm        = input.session("1400-1500", "PM", inline = "sb", group = GS, tooltip = "ICT Silver Bullet hours (New York time). As a trading window only these hours save ideas; in every window being inside them (or the killzones) earns the 'Time' confluence point.")
 showStats   = input.bool(true, "Stats row (ideas · win rate)", inline = "st", group = G7)
 markIdeas   = input.bool(true, "Mark past ideas", inline = "st", group = G7, tooltip = "Stats: ideas saved since the chart loaded; win % = reached TP1 among decided ideas; TP3 % = fully completed. Marks: a tag beyond each past idea's stop with grade and outcome (✓ TP1, ✗ stopped, ○ expired); hover for entry / stop / targets.")
-shadowMode  = input.string("Same grade or better", "Shadow ideas (filtered setups)", options = ["Same grade or better", "All grades", "Off"], group = G7, tooltip = "Setups the gates refuse are followed as SHADOW ideas: never saved, drawn or alerted, but their outcome is tagged on the chart (faint tag, hover shows why it was filtered) and counted on the 'Filtered' stats line. Same grade or better (default): only setups at or above 'Minimum grade' that were refused for another reason (session cap, confluence, HTF bias, window, cooldown, a live plan) – so with grade A the chart shows A setups only. All grades: B setups too. One shadow at a time; the same zone is not followed twice.")
-markKeep    = input.int(12, "Keep idea tags", minval = 1, maxval = 60, group = G7, tooltip = "Tags: grade · L / S · ✓ TP1 reached / ✗ stopped / ○ expired or scratch. Saved ideas draw solid, shadow ideas faint. Up to 200 tags; older ones are removed after this many days.")
+shadowMode  = input.string("All grades", "Shadow ideas (filtered setups)", options = ["Same grade or better", "All grades", "Off"], group = G7, tooltip = "Setups the gates refuse are followed as SHADOW ideas: never saved, drawn or alerted, but their outcome is tagged on the chart (faint tag, hover shows why it was filtered) and counted on the 'Filtered' stats line. Same grade or better (default): only setups at or above 'Minimum grade' that were refused for another reason (session cap, confluence, HTF bias, window, cooldown, a live plan) – so with grade A the chart shows A setups only. All grades: B setups too. One shadow at a time; the same zone is not followed twice.")
+markKeep    = input.int(80, "Keep idea tags", minval = 1, maxval = 150, inline = "mk2", group = G7)
+markDays    = input.int(3, "for (days)", minval = 1, maxval = 30, inline = "mk2", group = G7, tooltip = "Tags beyond each past idea's original stop: grade · ✓ TP1 reached / ✗ stopped / ○ expired or scratch (direction = colour and arrow). Saved ideas draw solid, shadow ideas faint with the reason in the hover text. The oldest tags go once the count or the age is exceeded; Present mode does not remove them.")
 
 // Alerts: the NEW IDEA alert() fires whenever a plan is saved; it does not depend on any checkbox
 // (the original removed that dependency so alerts cannot be silenced by a stale setting).
@@ -247,31 +248,33 @@ chartSec   = timeframe.in_seconds(timeframe.period)
 
 // Selectivity preset → effective gate values (the engine reads these, never the raw inputs)
 isStrict = preset == "Strict · A setups only"
+isBal    = preset == "Balanced · A setups, NY hours"
 isOrig   = preset == "Original · every graded setup"
-minGrade      = isStrict ? "A" : isOrig ? "B" : minGradeIn
-tradeWindow   = isStrict ? "Killzones" : isOrig ? "Any" : tradeWindowIn
-needOpt       = isStrict ? false : isOrig ? false : needOptIn
-legMinAtr     = isStrict ? 2.0 : isOrig ? 0.0 : legMinAtrIn
-noFullFill    = isStrict ? true : isOrig ? false : noFullFillIn
-needMss       = isStrict ? true : isOrig ? false : needMssIn
-sesIdeaCap    = isStrict ? 1 : isOrig ? 0 : sesIdeaCapIn
-apExtra       = isStrict ? true : isOrig ? true : apExtraIn
-qualityFloor  = isStrict ? "External sweep (VP-led ideas pass)" : isOrig ? "Off" : qualityFloorIn
-htfBias       = isStrict ? "Value location (OV / PD)" : isOrig ? "Off" : htfBiasIn
-resweepMode   = isStrict ? "Extend" : isOrig ? "Off" : resweepModeIn
-slBufLegPct   = isStrict ? 8.0 : isOrig ? 0.0 : slBufLegPctIn
-oneIdeaPerSweep = isStrict ? true : isOrig ? false : oneIdeaPerSweepIn
-mocQuiet      = isStrict ? true : isOrig ? false : mocQuietIn
-lunchQuiet    = isStrict ? true : isOrig ? false : lunchQuietIn
-replacePending = isStrict ? true : isOrig ? false : replacePendingIn
-mssMode       = isStrict ? "Either" : isOrig ? "10-bar high / low" : mssModeIn
-confirmBars   = isStrict ? 2 : isOrig ? 1 : confirmBarsIn
-ceDowngrade   = isStrict ? true : isOrig ? false : ceDowngradeIn
-trendLock     = isStrict ? "Block reversals" : isOrig ? "Off" : trendLockIn
-coolStop      = isStrict ? true : isOrig ? false : coolStopIn
-openQuietMin  = isStrict ? 5 : isOrig ? 0 : openQuietMinIn
-reviewQuiet   = isStrict ? 15 : isOrig ? 0 : reviewQuietIn
-ifvgCloseMode = isStrict ? "Pending at the IFVG (retest)" : isOrig ? "At the inversion close (original)" : ifvgCloseModeIn
+isPre    = isStrict or isBal
+minGrade      = isPre ? "A" : isOrig ? "B" : minGradeIn
+tradeWindow   = isStrict ? "Killzones" : isBal ? "NY AM + PM" : isOrig ? "Any" : tradeWindowIn
+needOpt       = isPre ? false : isOrig ? false : needOptIn
+legMinAtr     = isStrict ? 2.0 : isBal ? 1.5 : isOrig ? 0.0 : legMinAtrIn
+noFullFill    = isPre ? true : isOrig ? false : noFullFillIn
+needMss       = isPre ? true : isOrig ? false : needMssIn
+sesIdeaCap    = isStrict ? 1 : isBal ? 2 : isOrig ? 0 : sesIdeaCapIn
+apExtra       = isPre ? true : isOrig ? true : apExtraIn
+qualityFloor  = isStrict ? "External sweep (VP-led ideas pass)" : isBal ? "External sweep or VP context" : isOrig ? "Off" : qualityFloorIn
+htfBias       = isPre ? "Value location (OV / PD)" : isOrig ? "Off" : htfBiasIn
+resweepMode   = isPre ? "Extend" : isOrig ? "Off" : resweepModeIn
+slBufLegPct   = isPre ? 8.0 : isOrig ? 0.0 : slBufLegPctIn
+oneIdeaPerSweep = isStrict ? true : isBal ? false : isOrig ? false : oneIdeaPerSweepIn
+mocQuiet      = isPre ? true : isOrig ? false : mocQuietIn
+lunchQuiet    = isPre ? true : isOrig ? false : lunchQuietIn
+replacePending = isPre ? true : isOrig ? false : replacePendingIn
+mssMode       = isPre ? "Either" : isOrig ? "10-bar high / low" : mssModeIn
+confirmBars   = isStrict ? 2 : isBal ? 1 : isOrig ? 1 : confirmBarsIn
+ceDowngrade   = isPre ? true : isOrig ? false : ceDowngradeIn
+trendLock     = isStrict ? "Block reversals" : isBal ? "Score only" : isOrig ? "Off" : trendLockIn
+coolStop      = isPre ? true : isOrig ? false : coolStopIn
+openQuietMin  = isPre ? 5 : isOrig ? 0 : openQuietMinIn
+reviewQuiet   = isPre ? 15 : isOrig ? 0 : reviewQuietIn
+ifvgCloseMode = isPre ? "Pending at the IFVG (retest)" : isOrig ? "At the inversion close (original)" : ifvgCloseModeIn
 
 useVp        = vpOn and not isPlaybook
 useHist      = useVp and vpHistMode != "Off" and not isMinimalV and (chartSec > 60 or histOn1m)
@@ -1716,11 +1719,17 @@ f_planFreeze() =>
     if not na(st.lnEntry)
         line.set_x2(st.lnEntry, bar_index)
         line.set_x2(st.lnSl, bar_index)
+        line.set_color(st.lnEntry, color.new(st.plDir == 1 ? bullCol : bearCol, 55))
         for ln in st.lnTps
             line.set_x2(ln, bar_index)
     if not na(st.bxRisk)
         box.set_right(st.bxRisk, bar_index)
         box.set_right(st.bxReward, bar_index)
+        box.set_bgcolor(st.bxRisk, color.new(bearCol, 93))
+        box.set_bgcolor(st.bxReward, color.new(bullCol, 94))
+    if not na(st.bxZone)
+        box.set_right(st.bxZone, bar_index)
+        box.set_border_color(st.bxZone, color.new(chart.fg_color, 80))
 
 f_planClear() =>
     line.delete(st.lnEntry)
@@ -1735,7 +1744,7 @@ f_planClear() =>
 var array<label> ideaMarks = array.new<label>()
 var array<int>   ideaMarkT = array.new<int>()
 f_pruneMarks() =>
-    while array.size(ideaMarks) > markKeep or (isPresent and array.size(ideaMarkT) > 0 and bar_index - array.get(ideaMarkT, 0) > presentBars)
+    while array.size(ideaMarks) > markKeep or (array.size(ideaMarkT) > 0 and time - array.get(ideaMarkT, 0) > markDays * 86400000)
         label.delete(array.shift(ideaMarks))
         array.shift(ideaMarkT)
 
@@ -1748,8 +1757,8 @@ f_markTag(int bar, int dir, string grade, int hit, int nT, float entry, float R,
         txt = grade + " " + (win ? "✓" : state == 4 ? "✗" : "○")
         c = win ? bullCol : state == 4 ? bearCol : color.gray
         tip = (shadow ? "Not saved · " + why + "\n" : "Saved idea\n") + family + " · " + model + " (" + led + ")\nEntry " + f_price(entry) + " · SL " + f_price(y) + " · R " + f_price(R) + "\nTargets hit: " + str.tostring(hit) + "/" + str.tostring(nT) + "\n" + result
-        array.push(ideaMarks, label.new(f_x(bar), y, txt, style = dir == 1 ? label.style_label_up : label.style_label_down, color = color.new(color.white, 100), textcolor = color.new(c, shadow ? 70 : 25), size = markSize, tooltip = tip))
-        array.push(ideaMarkT, bar_index)
+        array.push(ideaMarks, label.new(f_x(bar), y, txt, style = dir == 1 ? label.style_label_up : label.style_label_down, color = shadow ? color.new(color.white, 100) : color.new(c, 25), textcolor = shadow ? color.new(c, 55) : color.white, size = markSize, tooltip = tip))
+        array.push(ideaMarkT, time)
         f_pruneMarks()
 
 f_markIdea(int state) =>
@@ -1900,9 +1909,10 @@ f_planEnd(int state, string result) =>
             st.nExp += 1
     if state == 3
         st.nFull += 1
-        f_planFreeze()
-    else
+    if state == 6
         f_planClear()
+    else
+        f_planFreeze()
     // a spent VP rotation must be re-earned; a price-action plan only resets the hold progress
     // (two plain ifs: Pine infers a function's return type from its last if/else, so the branches must not differ in type)
     if st.plLed == "VP-led"
@@ -1963,7 +1973,7 @@ if confirmed and (st.plState == 1 or st.plState == 2)
     else if st.plBe and not beBefore
         f_planBe()
 
-if confirmed and st.plState == 3 and bar_index - st.plEndBar > resultBars and not na(st.lnEntry)
+if confirmed and (st.plState == 3 or st.plState == 4 or st.plState == 5) and bar_index - st.plEndBar > resultBars and (not na(st.lnEntry) or not na(st.bxZone))
     f_planClear()
 
 // ── Shadow idea: the same lifecycle as the live plan, without drawings, alerts or session counting ──
@@ -2750,7 +2760,7 @@ if barstate.islast
         scoreTag = scoreOn ? (planLive or resultFresh ? " · " + str.tostring(st.plScore) + "/11" : dirNow != 0 ? " · " + str.tostring(liveScore) + "/11" : "") : ""
         gradeTxt = (st.plState == 2 ? "Grade " + st.plGrade : st.plState == 1 ? "Grade " + st.plGrade + " · Pending" : resultFresh ? "Grade " + st.plGrade + (st.plState == 3 ? " · Done" : st.plState == 4 ? " · Invalid" : " · Expired") : "Ungraded") + scoreTag
         headerTip = scoreOn ? (planLive or resultFresh ? "Saved idea · " + st.plPts : dirNow != 0 ? "Live context · " + livePts : "No direction yet") : "G2S grading · A = sweep + reaction + VP alignment · A+ = A plus two confluences"
-        headerTxt = "G2S · " + dirTxt + (dayBias != 0 ? (dayBias == 1 ? " ↑" : " ↓") : "") + " · " + gradeTxt + (isOrig ? " · Original" : isStrict ? " · Strict" : " · Custom")
+        headerTxt = "G2S · " + dirTxt + (dayBias != 0 ? (dayBias == 1 ? " ↑" : " ↓") : "") + " · " + gradeTxt + (isOrig ? " · Original" : isStrict ? " · Strict" : isBal ? " · Balanced" : " · Custom")
         setupTxt = planLive or resultFresh ? st.plFamily : st.vpDir != 0 and st.vpDir == dirNow ? (st.vpKind == "Rotation" ? "Value Rotation" : "Value Continuation") : sweepLive ? "Liquidity Inversion" : "—"
         modelTxt = st.plState == 2 ? st.plModel + " ✓ · " + st.plLed : st.plState == 1 ? st.plModel + " · Pending · " + st.plLed : resultFresh ? st.plModel + " · " + st.lastResult : st.reactOK and st.reactDir == dirNow ? (sweepLive ? "FVG / IFVG" : "FVG Retest") + " · Pending · Price-action-led" : st.vpDir != 0 and st.vpDir == dirNow and st.vpKind == "Rotation" ? "VP Retest / Hold · Pending · VP-led" : "FVG / IFVG · Pending · Price-action-led"
         sweepTxt = st.swDir == 2 ? "Two-sided · Review" : sweepLive ? (st.swDir == 1 ? "Bull" : "Bear") + " sweep · " + st.swName : "No qualifying sweep"
