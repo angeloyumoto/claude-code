@@ -163,6 +163,10 @@ On the worked example the result is entry +28.5, stop −2.5, R = 31 points, TP1
 
 **Grading.** A gate point is only deducted when the candidate actually earned it through that gate: a VP-led idea that passed the quality floor on value context is no longer charged for a sweep it never needed (it is charged for the VP point instead), and the shift point is only deducted from price-action ideas. In the Balanced preset the re-sweep guard is off; it made too many ideas wait for a pool just under the wick.
 
+## Compiled-size round (TradingView error CE10117)
+
+TradingView limits a script's compiled form to 100,256 tokens and refused the previous build at 100,889. Two things count there: every constant string by its length, and every function call with its arguments (defaults included). This round changed no behaviour: the six HTF gap slots are processed by one loop indexed by slot instead of six copies of each call, the plan / shadow / control lifecycles run through one call, the checklist table is filled from arrays in one loop, a few duplicated calls (profile drawing, intrabar accumulation, gap creation, plan drawing, alpha lookups) were folded into one, and the 92 input tooltips were condensed to at most 110 characters each (the long explanations live in this README). If the editor still reports the error, the number in the message says how much further to cut.
+
 ## Known differences from the invite-only script
 
 * Volume at price is estimated from chart bars (volume split evenly across the rows a bar covers, up/down by candle colour), the same class of estimate the original describes.
