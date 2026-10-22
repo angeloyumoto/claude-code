@@ -175,22 +175,23 @@ useBreaker  = input.bool(true, "Breaker block entries", inline = "bk", group = G
 showBreaker = input.bool(true, "draw it", inline = "bk", group = G7, tooltip = "ICT breaker block: after the sweep and the structure shift, the last candle that closed in the old direction at the swing the shift broke (the failed order block) becomes a zone. A retest that closes back beyond it is the 'Breaker Retest' model; an FVG entry zone overlapping it is the 'Unicorn' confluence point. The zone ends when price closes through it.")
 useOte      = input.bool(true, "OTE entries (62–79 % retrace of the displacement leg)", group = G7, tooltip = "Optimal Trade Entry: when price pulls back into the 62–79 % retracement of the leg from the sweep extreme to the farthest print since, and holds (closes inside or above the 79 % level), a plan is armed at the 70.5 % level with the sweep wick as the stop. One OTE idea per sweep. Catches the reversals that retrace deeper than the fair value gap.")
 showPlan    = input.string("Position boxes", "Draw the plan", options = ["Position boxes", "Lines", "Off"], group = G7, tooltip = "Lines and labels for the saved idea, extended 17 bars past price while it is live; a completed plan is frozen for 'Show result for' bars. Detection, grading and the NEW IDEA alert run regardless.")
-entryRefIn  = input.string("Near Edge", "FVG entry reference", options = ["Near Edge", "50%", "Far Edge", "Confirmation Close"], group = G7, tooltip = "Where a retest plan enters inside the FVG / IFVG. Near Edge = the edge price reaches first (original default). Confirmation Close = the current close, so the plan is live at once instead of pending.")
+entryRefIn  = input.string("50%", "FVG entry reference", options = ["Near Edge", "50%", "Far Edge", "Confirmation Close"], group = G7, tooltip = "Where a retest plan enters inside the FVG / IFVG. Near Edge = the edge price reaches first (original default). Confirmation Close = the current close, so the plan is live at once instead of pending.")
 stopRefIn   = input.string("Structure (sweep wick → pivot → gap)", "Stop reference (FVG models)", options = ["Structure (sweep wick → pivot → gap)", "FVG far edge", "Trade Idea High/Low", "Latest High/Low", "Internal High/Low", "ATR Stop"], group = G7, tooltip = "Structural stop for FVG / IFVG models (VP models always use the hold / retest extreme or the level).\nStructure: the sweep wick while it is within 'Max stop', else the nearest protected pivot between the entry and that wick, else the far edge of the zone (checklist: below / above the rejection wick, 1–2 structure legs behind the entry, protected by internal liquidity).\nFVG far edge: opposite edge of the zone.\nTrade Idea High/Low: the sweep extreme.\nLatest High/Low: the displacement candle extreme (a deep retest tags it on a 1m chart).\nInternal High/Low: nearest protected pivot.\nATR Stop: ATR distance only.")
 slBufTicks  = input.int(4, "Stop buffer (ticks)", minval = 0, inline = "sl", group = G7)
 slBufAtr    = input.float(0.25, "or ATR ×", minval = 0, step = 0.05, inline = "sl", group = G7)
-slBufLegPctIn = input.float(8, "or % of the leg", minval = 0, step = 1, inline = "sl", group = G7, tooltip = "The buffer beyond the structural stop is the LARGEST of ticks, ATR × (the 5-minute ATR on 1m charts) and this share of the displacement leg, so the stop scales with the move being traded. A few ticks is not enough on a 1m NQ chart: the second, slightly deeper sweep of the same low tags it.")
+slBufLegPctIn = input.float(4, "or % of the leg", minval = 0, step = 1, inline = "sl", group = G7, tooltip = "The buffer beyond the structural stop is the LARGEST of ticks, ATR × (the chart ATR(14)) and this share of the displacement leg, so the stop scales with the move being traded. A few ticks is not enough on a 1m NQ chart: the second, slightly deeper sweep of the same low tags it.")
 resweepModeIn = input.string("Extend", "Next pool under the wick", options = ["Extend", "Skip", "Off"], inline = "rs", group = GS)
-resweepAtr  = input.float(0.75, "within (ATR ×)", minval = 0.1, step = 0.25, inline = "rs", group = GS, tooltip = "An untaken session / PDH / PDL level or pivot that sits just beyond the sweep wick is the next target of the same sweep. Extend: the stop reference moves beyond that level (buffer and Max stop still apply). Skip: the idea waits. ATR here is the 5-minute ATR on 1m charts.")
+resweepAtr  = input.float(0.5, "within (ATR ×)", minval = 0.1, step = 0.25, inline = "rs", group = GS, tooltip = "An untaken session / PDH / PDL level or pivot that sits just beyond the sweep wick is the next target of the same sweep. Extend: the stop reference moves beyond that level (buffer and Max stop still apply). Skip: the idea waits. ATR here is the chart ATR(14).")
 oneIdeaPerSweepIn = input.bool(true, "One saved idea per sweep", group = GS, tooltip = "A sweep yields at most one idea that activates or is stopped. A deeper print beyond the sweep wick re-bases the sweep (new displacement and shift required), so a second idea needs new evidence, not the same wick.")
 atrFallback = input.bool(false, "ATR stop when no structure fits", inline = "af", group = G7)
-slAtrMult   = input.float(1.0, "× ATR", minval = 0.2, step = 0.1, inline = "af", group = G7, tooltip = "Off (default): an idea whose structural stop is missing, tighter than 0.25 ATR or wider than 'Max stop' is skipped (Status shows why) instead of getting a stop that no structure protects. On: the ATR stop (× ATR 14) replaces it and TP1 must pay 'TP1 minimum when the stop is the ATR fallback'.")
-maxSlAtr    = input.float(3.0, "Max stop (ATR ×)", minval = 0.5, step = 0.5, inline = "mx", group = G7)
+slAtrMult   = input.float(1.0, "× ATR", minval = 0.2, step = 0.1, inline = "af", group = G7, tooltip = "Off (default): an idea whose structural stop is missing, tighter than 1 ATR or wider than 'Max stop' is skipped (Status shows why) instead of getting a stop that no structure protects. On: the ATR stop (× ATR 14) replaces it and TP1 must pay 'TP1 minimum when the stop is the ATR fallback'.")
+maxSlAtr    = input.float(4.0, "Max stop (ATR ×)", minval = 0.5, step = 0.5, inline = "mx", group = G7)
 maxTpAtr    = input.float(8.0, "max target (ATR ×)", minval = 1, step = 0.5, inline = "mx", group = G7, tooltip = "A structural stop farther than the first value falls back to the ATR stop; candidate targets farther than the second are ignored.")
-minTp1R     = input.float(1.0, "TP1 minimum (R)", minval = 0.25, step = 0.25, inline = "tp", group = G7)
+minTp1R     = input.float(0.5, "TP1 minimum (R)", minval = 0.25, step = 0.25, inline = "tp", group = G7)
 tpSepR      = input.float(0.25, "separation (R)", minval = 0.1, step = 0.05, inline = "tp", group = G7, tooltip = "Targets (max 3, nearest first) come from VP levels, untaken session highs / lows, pivots and opposing FVG edges. Every target must be at least 'TP1 minimum' R away, and targets closer than 'separation' R to one already chosen are skipped. No valid target = no plan.")
-pendingBars = input.int(40, "Pending expires after (bars)", minval = 5, maxval = 1000, inline = "lf", group = G7)
-planMaxBars = input.int(150, "active times out after", minval = 10, maxval = 2000, inline = "lf", group = G7, tooltip = "Pending: bars a retest plan waits for price to reach the entry. Active: bars an entered plan may run without reaching TP1 before it is marked expired.")
+minLastR    = input.float(1.0, "last target ≥ (R)", minval = 0.25, step = 0.25, inline = "tp2", group = G7, tooltip = "TP1 may sit at 'TP1 minimum' R (the displacement high is a valid first target); the farthest target must still pay at least this many R or the plan is not saved.")
+pendingBars = input.int(20, "Pending expires after (bars)", minval = 5, maxval = 1000, inline = "lf", group = G7)
+planMaxBars = input.int(90, "active times out after", minval = 10, maxval = 2000, inline = "lf", group = G7, tooltip = "Pending: bars a retest plan waits for price to reach the entry. Active: bars an entered plan may run without reaching TP1 before it is marked expired.")
 resultBars  = input.int(30, "Show result for (bars)", minval = 1, group = G7, tooltip = "A finished plan stays on the chart, faded, for this many bars; its tag stays for 'Keep idea tags'.")
 minGradeIn  = input.string("A", "Minimum grade to save", options = ["B", "A", "A+"], inline = "fl", group = GS)
 qualityFloorIn = input.string("External sweep (VP-led ideas pass)", "Quality floor", options = ["Off", "External sweep or VP context", "External sweep (VP-led ideas pass)", "External sweep"], group = GS, tooltip = "Which context may become an idea. Off = any confirmed sweep, including the small internal pivots (③ length). External sweep or VP context = a session / PDH / PDL sweep, or any VP level cross in the idea's direction. External sweep (VP-led ideas pass) = price-action ideas need a live session / PDH / PDL sweep in their direction; VP Hold / VP Retest ideas pass on their own. External sweep = every idea needs the external sweep.")
@@ -200,7 +201,7 @@ openQuietMinIn = input.int(5, "No ideas in the first (min) of a session", minval
 reviewQuietIn = input.int(15, "and (bars) after a two-sided sweep", minval = 0, inline = "qt", group = GS, tooltip = "Quiet periods: no plan is saved (and no NEW IDEA alert fires) this many minutes after a shown ② session opens, nor this many bars after a two-sided sweep, even when a one-sided sweep replaces the review at once. Sweeps, reactions and the panel keep updating; a retest after the quiet time still counts. 0 = off.")
 zoneMaxAge  = input.int(40, "Zone retest within (bars)", inline = "za", minval = 5, group = GS)
 minTradeGapAtr = input.float(0.5, "min gap to trade (ATR ×)", minval = 0, step = 0.05, inline = "za", group = GS, tooltip = "An IFVG must have inverted, and an FVG must have formed, within this many bars for its retest to count ('IFVG Close' is always fresh). FVG / IFVG entry models only use gaps at least this big; ④ still draws smaller ones (a thinner gap has no room for a structural stop). 0 = off.")
-atrMinTp1R  = input.float(1.5, "TP1 minimum when the stop is the ATR fallback (R)", minval = 0.5, step = 0.25, group = G7, tooltip = "When no structural stop is usable (missing, tighter than 0.25 ATR or wider than 'Max stop') the ATR stop replaces it and TP1 must pay at least this many R; nearer targets are dropped. 1.0 = same as the normal minimum.")
+atrMinTp1R  = input.float(1.5, "TP1 minimum when the stop is the ATR fallback (R)", minval = 0.5, step = 0.25, group = G7, tooltip = "When no structural stop is usable (missing, tighter than 1 ATR or wider than 'Max stop') the ATR stop replaces it and TP1 must pay at least this many R; nearer targets are dropped. 1.0 = same as the normal minimum.")
 needLiqTp   = input.bool(true, "Targets need a liquidity / VP level", group = G7, tooltip = "At least one target must be a VP level, an untaken session high / low, PDH / PDL or a pivot. A plan whose only draws are opposing FVG edges waits instead of saving.")
 needMssIn    = input.bool(true, "Require a market structure shift", inline = "ms", group = GS)
 mssModeIn   = input.string("Either", "Shift test", options = ["CISD", "10-bar high / low", "Either", "Both"], inline = "ms2", group = GS)
@@ -208,8 +209,8 @@ cisdMaxRun  = input.int(12, "CISD run · max candles", minval = 1, maxval = 30, 
 mssLook     = input.int(10, "lookback (bars)", minval = 2, maxval = 60, inline = "ms", group = GS, tooltip = "ICT confirmation: after the sweep, price must CLOSE beyond the short-term high (low sweep) or low (high sweep) that preceded it – the highest high / lowest low of this many bars before the sweep candle – before an FVG / IFVG entry counts. A deeper sweep resets the reference. Shown in the checklist as 'MSS ✓'.")
 ifvgCloseModeIn = input.string("Pending at the IFVG (retest)", "IFVG Close entry", options = ["Pending at the IFVG (retest)", "At the inversion close (original)"], group = GS, tooltip = "Pending (default): the confirmed inversion arms a plan at the IFVG itself (FVG entry reference) and waits for price to come back, as the checklist's 'entry area'. At the close: enters at the inversion candle's close – the fastest and the worst price, and the one most often stopped on the retest.")
 confirmBarsIn = input.int(2, "Confirmation closes", minval = 1, maxval = 2, inline = "cf", group = GS)
-confirmDistAtr = input.float(0.1, "beyond the entry (ATR ×)", minval = 0, step = 0.05, inline = "cf", group = GS, tooltip = "Retest models arm a PENDING plan at the zone's near edge as soon as price is away from it, like a resting limit order. It activates when a bar has touched the entry and closes back beyond it by this many ATR (5-minute ATR on 1m charts); with 2 closes the next bar must not close back inside the zone. The recorded fill stays the entry reference.")
-ceDowngradeIn = input.bool(true, "CE downgrade", inline = "cf", group = GS, tooltip = "If the retest wick trades through the zone's 50 % (consequent encroachment) before activation, the entry moves to the CE and the stop to the far edge + buffer; a close through the CE before activation expires the plan.")
+confirmDistAtr = input.float(0.1, "beyond the entry (ATR ×)", minval = 0, step = 0.05, inline = "cf", group = GS, tooltip = "Retest models arm a PENDING plan at the zone's near edge as soon as price is away from it, like a resting limit order. It activates when a bar has touched the entry and closes back beyond it by this many ATR (5-minute ATR on 1m charts); with 2 closes the next bar must not close back inside the zone; the close must also be back beyond the zone's near edge. The recorded fill stays the entry reference.")
+ceDowngradeIn = input.bool(true, "CE downgrade", inline = "cf", group = GS, tooltip = "If the retest wick trades through the zone's 50 % (consequent encroachment) before activation, the entry moves to the CE (the structural stop stays); a close through the CE before activation expires the plan.")
 trendLockIn = input.string("Block reversals", "Trend-day lock", options = ["Block reversals", "Score only", "Off"], group = GS, tooltip = "After the Initial Balance (09:30–10:30) the day is read from two votes: one IB side extended by at least its own range with the other side intact, and at least 90 % of closes since 10:00 on one side of the session VWAP. Both votes = trend day. Block reversals: Liquidity Inversion ideas against the trend are not saved (they are followed as shadows). The lock lifts once both IB sides are broken. Score only: the day-type point only.")
 confirmFill = input.bool(true, "Pending entry needs a close back beyond the entry", group = GS, tooltip = "A pending plan activates only on a bar that touches the entry and closes back on the trade side of it (the checklist's 'candle close respecting the gap'). A close through the far edge of the zone before any activation expires the plan; a wick to the stop before activation expires it too (no fill was taken). Off: a touch fills, as a resting limit order would.")
 beMode      = input.string("After TP1", "Breakeven", options = ["After TP1", "After 1R or TP1", "Off"], group = G7, tooltip = "Checklist risk rule: move the stop to the entry after TP1 (the first liquidity target) or after 1R. A later stop at entry after TP1 still counts as a win (TP1 reached); at entry before TP1 it is a scratch, not a stop-out.")
@@ -228,7 +229,7 @@ sbAm        = input.session("1000-1100", "Silver Bullet · AM", inline = "sb", g
 sbPm        = input.session("1400-1500", "PM", inline = "sb", group = GS, tooltip = "ICT Silver Bullet hours (New York time). As a trading window only these hours save ideas; in every window being inside them (or the killzones) earns the 'Time' confluence point.")
 showStats   = input.bool(true, "Stats row (ideas · win rate)", inline = "st", group = G7)
 markIdeas   = input.bool(true, "Mark past ideas", inline = "st", group = G7, tooltip = "Stats: ideas saved since the chart loaded; win % = reached TP1 among decided ideas; TP3 % = fully completed. Marks: a tag beyond each past idea's stop with grade and outcome (✓ TP1, ✗ stopped, ○ expired); hover for entry / stop / targets.")
-shadowMode  = input.string("All grades", "Shadow ideas (filtered setups)", options = ["Same grade or better", "All grades", "Off"], group = G7, tooltip = "Setups the gates refuse are followed as SHADOW ideas: never saved, drawn or alerted, but their outcome is tagged on the chart (faint tag, hover shows why it was filtered) and counted on the 'Filtered' stats line. Same grade or better (default): only setups at or above 'Minimum grade' that were refused for another reason (session cap, confluence, HTF bias, window, cooldown, a live plan) – so with grade A the chart shows A setups only. All grades: B setups too. One shadow at a time; the same zone is not followed twice.")
+shadowMode  = input.string("Same grade or better", "Shadow ideas (filtered setups)", options = ["Same grade or better", "All grades", "Off"], group = G7, tooltip = "Setups the gates refuse are followed as SHADOW ideas: never saved, drawn or alerted, but their outcome is tagged on the chart (faint tag, hover shows why it was filtered) and counted on the 'Filtered' stats line. Same grade or better (default): only setups at or above 'Minimum grade' that were refused for another reason (session cap, confluence, HTF bias, window, cooldown, a live plan) – so with grade A the chart shows A setups only. All grades: B setups too. One shadow at a time; the same zone is not followed twice.")
 markKeep    = input.int(80, "Keep idea tags", minval = 1, maxval = 150, inline = "mk2", group = G7)
 markDays    = input.int(3, "for (days)", minval = 1, maxval = 30, inline = "mk2", group = G7, tooltip = "Tags beyond each past idea's original stop: grade · ✓ TP1 reached / ✗ stopped / ○ expired or scratch (direction = colour and arrow). Saved ideas draw solid, shadow ideas faint with the reason in the hover text. The oldest tags go once the count or the age is exceeded; Present mode does not remove them.")
 
@@ -261,8 +262,8 @@ sesIdeaCap    = isStrict ? 1 : isBal ? 2 : isOrig ? 0 : sesIdeaCapIn
 apExtra       = isPre ? true : isOrig ? true : apExtraIn
 qualityFloor  = isStrict ? "External sweep (VP-led ideas pass)" : isBal ? "External sweep or VP context" : isOrig ? "Off" : qualityFloorIn
 htfBias       = isPre ? "Value location (OV / PD)" : isOrig ? "Off" : htfBiasIn
-resweepMode   = isPre ? "Extend" : isOrig ? "Off" : resweepModeIn
-slBufLegPct   = isPre ? 8.0 : isOrig ? 0.0 : slBufLegPctIn
+resweepMode   = isPre ? "Skip" : isOrig ? "Off" : resweepModeIn
+slBufLegPct   = isPre ? 4.0 : isOrig ? 0.0 : slBufLegPctIn
 oneIdeaPerSweep = isStrict ? true : isBal ? false : isOrig ? false : oneIdeaPerSweepIn
 mocQuiet      = isPre ? true : isOrig ? false : mocQuietIn
 lunchQuiet    = isPre ? true : isOrig ? false : lunchQuietIn
@@ -1460,7 +1461,7 @@ if confirmed
                 st.swDir := 0
             else if st.reactOK and bar_index - st.reactBar > thesisWindow
                 st.swDir := 0
-            else if st.reactOK and (st.swDir == 1 ? close < st.swExt : close > st.swExt)
+            else if st.reactOK and not na(st.swLevel) and (st.swDir == 1 ? close < st.swLevel : close > st.swLevel)
                 st.swDir := 0
             if st.swDir == 0
                 st.reactOK := false
@@ -1774,20 +1775,22 @@ f_lifeStep(Life L, bool useFill) =>
     activated = false
     if L.state == 1
         L.touched := L.touched or (d == 1 ? low <= L.entry : high >= L.entry)
-        held = not useFill or not confirmFill or (d == 1 ? close > L.entry + confirmDistAtr * atrRisk : close < L.entry - confirmDistAtr * atrRisk)
+        held = not useFill or not confirmFill or (d == 1 ? close > math.max(L.entry + confirmDistAtr * atrRisk, nz(L.zTop, L.entry)) : close < math.min(L.entry - confirmDistAtr * atrRisk, nz(L.zBot, L.entry)))
         ceLvl = (L.zTop + L.zBot) / 2
         if useFill and ceDowngrade and not na(L.zTop) and not na(L.far) and not L.ceHit and (d == 1 ? L.entry > ceLvl and low <= ceLvl : L.entry < ceLvl and high >= ceLvl)
             L.ceHit := true
             L.entry := ceLvl
-            L.sl := d == 1 ? L.far - L.buf : L.far + L.buf
             L.R := math.abs(L.entry - L.sl)
         zoneFail = useFill and confirmFill and not na(L.far) and (d == 1 ? close < L.far : close > L.far)
         ceFail = useFill and ceDowngrade and L.ceHit and (d == 1 ? close < ceLvl : close > ceLvl)
         // a retest wick through the far edge of an FVG / IFVG zone is a full fill: no entry (④ 'Retest must not fill the whole gap')
-        fullFill = useFill and noFullFill and not na(L.far) and not na(L.fvg) and (d == 1 ? low < L.far : high > L.far)
+        fullFill = useFill and noFullFill and entryRefIn == "Near Edge" and not na(L.far) and not na(L.fvg) and (d == 1 ? low < L.far : high > L.far)
         if bar_index - L.bar > pendingBars
             endState := 5
             result := "Expired · no activation"
+        else if n > 0 and (d == 1 ? high >= array.get(L.tps, 0) : low <= array.get(L.tps, 0))
+            endState := 5
+            result := "Expired · target first"
         else if (d == 1 ? low <= L.sl : high >= L.sl)
             endState := useFill and confirmFill ? 5 : 4
             result := useFill and confirmFill ? "Expired · stop swept before entry" : "Setup Invalid · SL before activation"
@@ -1798,6 +1801,7 @@ f_lifeStep(Life L, bool useFill) =>
             L.confirmN += 1
             if L.confirmN >= (useFill ? confirmBars : 1)
                 L.state := 2
+                L.bar := bar_index
                 activated := true
         else
             L.confirmN := 0
@@ -1959,6 +1963,7 @@ if confirmed and (st.plState == 1 or st.plState == 2)
     st.plSl := pl.sl
     st.plHit := pl.hit
     st.plR := pl.R
+    st.plBar := pl.bar
     st.plBe := pl.be
     st.plTouched := pl.touched
     st.plConfirmN := pl.confirmN
@@ -2004,7 +2009,7 @@ f_fvgNear(Fvg f, int d) =>
 f_fvgFar(Fvg f, int d) =>
     d == 1 ? f.bottom : f.top
 
-// Retest zones arm a pending plan as soon as price is away from them (a resting limit at the near edge); nearest zone first.
+// Retest zones arm a pending plan as soon as price is away from them (a resting limit at the near edge); the gap nearest the sweep wick (the displacement gap) first; nearest to price when there is no sweep.
 f_pickFvgRetest(array<Fvg> arr, int d, int sinceBar) =>
     Fvg r = na
     best = float(na)
@@ -2013,7 +2018,7 @@ f_pickFvgRetest(array<Fvg> arr, int d, int sinceBar) =>
             near = f_fvgNear(f, d)
             beyond = d == 1 ? close - near : near - close
             fresh = d == 1 ? f.minClose > f.bottom : f.maxClose < f.top
-            dist = math.abs(close - near)
+            dist = st.swDir == d and not na(st.swExt) ? math.abs(near - st.swExt) : math.abs(close - near)
             if beyond >= 0.25 * atrRisk and fresh and (na(best) or dist < best)
                 best := dist
                 r := f
@@ -2064,14 +2069,14 @@ f_protectedPivot(int d, float entry) =>
 
 // Structural stop ladder (checklist: below / above the rejection wick, 1–2 structure legs behind the entry, protected by
 // internal liquidity): the sweep wick while it is within 'Max stop', else the nearest protected pivot between the entry
-// and that wick, else the far edge of the zone. Anything tighter than 0.25 ATR is not a structure.
+// and that wick, else the far edge of the zone. Anything tighter than 1 chart ATR is not a structure; the cap is 'Max stop' × the chart ATR.
 f_structStop(int d, float entry, float far) =>
     float r = na
-    lim = maxSlAtr * atrRisk
+    lim = maxSlAtr * atr
     sw  = st.swDir == d ? st.swExt : float(na)
     piv = f_protectedPivot(d, entry)
     // re-sweep guard: an untaken level or pivot just beyond the wick is the next pool of the same sweep
-    guard = resweepAtr * atrRisk
+    guard = resweepAtr * atr
     deep = float(na)
     if not na(sw) and resweepMode != "Off"
         for s in sessions
@@ -2085,11 +2090,11 @@ f_structStop(int d, float entry, float far) =>
     st.resweepSkip := not na(deep) and resweepMode == "Skip"
     if st.resweepSkip
         r := float(na)      // Skip: the idea waits until the next pool is taken
-    else if not na(sw) and math.abs(entry - sw) <= lim and math.abs(entry - sw) >= 0.5 * atrRisk
+    else if not na(sw) and math.abs(entry - sw) <= lim and math.abs(entry - sw) >= 1.0 * atr
         r := sw
-    else if not na(piv) and math.abs(entry - piv) <= lim and math.abs(entry - piv) >= 0.5 * atrRisk and (na(sw) or (d == 1 ? piv >= sw : piv <= sw))
+    else if not na(piv) and math.abs(entry - piv) <= lim and math.abs(entry - piv) >= 1.0 * atr and (na(sw) or (d == 1 ? piv >= sw : piv <= sw))
         r := piv
-    else if not na(far) and math.abs(entry - far) <= lim and math.abs(entry - far) >= 0.5 * atrRisk
+    else if not na(far) and math.abs(entry - far) <= lim and math.abs(entry - far) >= 1.0 * atr
         r := far
     r
 
@@ -2113,6 +2118,9 @@ f_candidates(int d, float entry) =>
             array.push(pool, p.price)
         if d == -1 and not p.isHigh and p.price < entry
             array.push(pool, p.price)
+    // the displacement high / low is the first opposing liquidity: the natural TP1
+    if st.swDir == d and not na(st.legExt) and (d == 1 ? st.legExt > entry : st.legExt < entry)
+        array.push(pool, st.legExt)
     for f in fvgs
         if f.state == 0 and f.dir == -d
             if d == 1 and f.bottom > entry
@@ -2154,6 +2162,8 @@ f_pickTargets(int d, float entry, float R, array<float> pri, array<float> poolA,
         array.sort(tps, order.ascending)
     else
         array.sort(tps, order.descending)
+    if array.size(tps) > 0 and math.abs(array.get(tps, array.size(tps) - 1) - entry) < minLastR * R
+        array.clear(tps)
     tps
 
 f_grade(int d, string led, float entry) =>
@@ -2268,7 +2278,7 @@ f_biasOK(int d) =>
     // an external sweep that already produced the shift overrides the 15m+ map: the newest 15m gap is usually the one that drove price into the liquidity
     override = st.swDir == d and st.swExternal and st.mssOK
     mapD = override ? 0 : (htfBias == "15m+ FVG map" or htfBias == "Map + Value") ? f_mapBias() : 0
-    valD = (htfBias == "Value location (OV / PD)" or htfBias == "Map + Value" or htfBias == "Value + Daily") ? f_valueBias() : 0
+    valD = override ? 0 : (htfBias == "Value location (OV / PD)" or htfBias == "Map + Value" or htfBias == "Value + Daily") ? f_valueBias() : 0
     dayD = (htfBias == "Daily bias" or htfBias == "Value + Daily") ? dayBias : 0
     pdS = array.get(sessions, array.size(sessions) - 1)
     pdBlock = dayD != 0 and pdS.done and ((d == -1 and pdS.hiClosed and close > pdS.hi) or (d == 1 and pdS.loClosed and close < pdS.lo))
@@ -2385,9 +2395,9 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
     biasOK = model == "" or na(entry) or f_biasOK(d)
     if model != "" and not na(entry)
         // no structure within reach = no idea (unless the ATR stop is allowed): a stop nothing protects is the stop that gets hit
-        buf0 = math.max(slBufTicks * tick, math.max(slBufAtr * atrRisk, slBufLegPct / 100 * nz(leg, 0)))
+        buf0 = math.max(slBufTicks * tick, math.max(slBufAtr * atr, slBufLegPct / 100 * nz(leg, 0)))
         sl0 = d == 1 ? structStop - buf0 : structStop + buf0
-        noStruct = na(sl0) or (d == 1 ? sl0 >= entry - tick : sl0 <= entry + tick) or math.abs(entry - sl0) < 0.5 * atrRisk or math.abs(entry - sl0) > maxSlAtr * atrRisk + buf0
+        noStruct = na(sl0) or (d == 1 ? sl0 >= entry - tick : sl0 <= entry + tick) or math.abs(entry - sl0) < 1.0 * atr or math.abs(entry - sl0) > maxSlAtr * atr + buf0
         if noStruct and not atrFallback and stopRefIn != "ATR Stop"
             if saveSlot
                 st.lastNote := st.resweepSkip ? "Waiting · next pool within " + str.tostring(resweepAtr) + " ATR · " + model : "Waiting · no structural stop within " + str.tostring(maxSlAtr) + " ATR · " + model
@@ -2397,9 +2407,9 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
                     st.holdCount := 0
             model := ""
     if model != "" and not na(entry)
-        buf = math.max(slBufTicks * tick, math.max(slBufAtr * atrRisk, slBufLegPct / 100 * nz(leg, 0)))
+        buf = math.max(slBufTicks * tick, math.max(slBufAtr * atr, slBufLegPct / 100 * nz(leg, 0)))
         sl = d == 1 ? structStop - buf : structStop + buf
-        atrStop = na(sl) or (d == 1 ? sl >= entry - tick : sl <= entry + tick) or math.abs(entry - sl) < 0.5 * atrRisk or math.abs(entry - sl) > maxSlAtr * atrRisk + buf
+        atrStop = na(sl) or (d == 1 ? sl >= entry - tick : sl <= entry + tick) or math.abs(entry - sl) < 1.0 * atr or math.abs(entry - sl) > maxSlAtr * atr + buf
         if atrStop
             sl := d == 1 ? entry - slAtrMult * atr : entry + slAtrMult * atr
         R = math.abs(entry - sl)
@@ -2429,7 +2439,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
         optOK = not needOpt or f_optConf(d)
         lateOK = not inLate or family == "Value Continuation" or (st.trendDir != 0 and st.trendDir == d)
         trendOK = trendLock != "Block reversals" or family != "Liquidity Inversion" or st.trendDir == 0 or st.trendDir == d
-        replaceOK = st.plState != 1 or scoreNow > st.plScore
+        replaceOK = st.plState != 1 or (scoreNow > st.plScore and (d == 1 ? entry <= st.plEntry : entry >= st.plEntry))
         canSave = saveSlot and biasOK and gradeOK and floorOK and optOK and capOK and lateOK and trendOK and replaceOK and array.size(tps) > 0
         if not canSave
             if saveSlot and st.plState != 1
@@ -2465,7 +2475,7 @@ if confirmed and (saveSlot or shadowSlot) and st.swDir != 2 and (dirNow == 1 or 
             st.plZTop := zTop
             st.plZBot := zBot
             st.plBuf := buf
-            st.plTouched := false
+            st.plTouched := not liveNow and (d == 1 ? low <= entry : high >= entry)
             st.plConfirmN := 0
             st.plCeHit := false
             st.plLegExt := st.legExt
