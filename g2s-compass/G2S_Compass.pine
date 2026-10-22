@@ -299,8 +299,10 @@ lblSzUp   = chartTextIn == "Small" ? size.normal : size.small
 fvgTxtSz  = lblSz
 markSize  = lblSz
 // alpha ladder: live 10 · untaken 45 · developing 65 · taken / bookkeeping 80
-f_alpha(string s) =>
-    s == "live" ? 10 : s == "untaken" ? 45 : s == "developing" ? 65 : 80
+const int aLive = 10
+const int aUntaken = 45
+const int aDev = 65
+const int aTaken = 80
 const int labelX = 6
 
 f_pos(string s) =>
@@ -769,8 +771,8 @@ f_sesDraw(Ses s) =>
     if useSesLines and s.show
         lst = s.isPd ? pdStyle : sesStyle
         c = sesIndivCol ? s.col : levelCol
-        s.hiLn := line.new(f_x(math.max(s.hiBar, bar_index - levelLookback)), s.hi, bar_index + 5, s.hi, color = color.new(c, f_alpha("untaken")), style = lst)
-        s.loLn := line.new(f_x(math.max(s.loBar, bar_index - levelLookback)), s.lo, bar_index + 5, s.lo, color = color.new(c, f_alpha("untaken")), style = lst)
+        s.hiLn := line.new(f_x(math.max(s.hiBar, bar_index - levelLookback)), s.hi, bar_index + 5, s.hi, color = color.new(c, aUntaken), style = lst)
+        s.loLn := line.new(f_x(math.max(s.loBar, bar_index - levelLookback)), s.lo, bar_index + 5, s.lo, color = color.new(c, aUntaken), style = lst)
 
 // Developing instance: drawn lighter, never sweepable until it completes.
 f_sesDrawDev(Ses s) =>
@@ -780,8 +782,8 @@ f_sesDrawDev(Ses s) =>
     label.delete(s.dLoLb)
     if useSesLines and s.show and s.abbr != "NY"
         c = sesIndivCol ? s.col : levelCol
-        s.dHiLn := line.new(f_x(math.max(s.dHiBar, bar_index - levelLookback)), s.dHi, bar_index + 5, s.dHi, color = color.new(c, f_alpha("developing")), style = sesStyle)
-        s.dLoLn := line.new(f_x(math.max(s.dLoBar, bar_index - levelLookback)), s.dLo, bar_index + 5, s.dLo, color = color.new(c, f_alpha("developing")), style = sesStyle)
+        s.dHiLn := line.new(f_x(math.max(s.dHiBar, bar_index - levelLookback)), s.dHi, bar_index + 5, s.dHi, color = color.new(c, aDev), style = sesStyle)
+        s.dLoLn := line.new(f_x(math.max(s.dLoBar, bar_index - levelLookback)), s.dLo, bar_index + 5, s.dLo, color = color.new(c, aDev), style = sesStyle)
 
 // A completed instance (or a new previous day) replaces the ledger record "by source name".
 f_sesCommit(Ses s, float hi, float lo, int hiBar, int loBar, int hiTime, int loTime) =>
@@ -862,7 +864,7 @@ f_sesUpdate(Ses s, bool inNow, bool isNewDay) =>
                 s.hiClosed := not hiSw
                 if not na(s.hiLn)
                     line.set_x2(s.hiLn, bar_index)
-                    line.set_color(s.hiLn, color.new(sesIndivCol ? s.col : levelCol, f_alpha("taken")))
+                    line.set_color(s.hiLn, color.new(sesIndivCol ? s.col : levelCol, aTaken))
                     if takenMode == "Remove"
                         line.delete(s.hiLn)
         if not s.loTaken and (not na(s.loBreachBar) or low < s.lo)
@@ -876,7 +878,7 @@ f_sesUpdate(Ses s, bool inNow, bool isNewDay) =>
                 s.loClosed := not loSw
                 if not na(s.loLn)
                     line.set_x2(s.loLn, bar_index)
-                    line.set_color(s.loLn, color.new(sesIndivCol ? s.col : levelCol, f_alpha("taken")))
+                    line.set_color(s.loLn, color.new(sesIndivCol ? s.col : levelCol, aTaken))
                     if takenMode == "Remove"
                         line.delete(s.loLn)
     [hiSw, loSw, hiExt, loExt]
@@ -1002,13 +1004,14 @@ f_accRange(Profile p, float h, float l, float vol0, bool isUp) =>
 f_acc(Profile p) =>
     p.bars += 1
     nIb = ltfOK and not na(ibV) ? array.size(ibV) : 0
-    if nIb > 0
-        for i = 0 to nIb - 1
-            f_accRange(p, array.get(ibH, i), array.get(ibL, i), array.get(ibV, i), array.get(ibUp, i))
-    else if vpDist == "Close only"
-        f_accRange(p, close, close, volume, close >= open)
-    else
-        f_accRange(p, high, low, volume, close >= open)
+    // one call site: every intrabar row when there are any, otherwise the chart bar (or its close) once
+    n = nIb > 0 ? nIb : 1
+    for i = 0 to n - 1
+        h = nIb > 0 ? array.get(ibH, i) : (vpDist == "Close only" ? close : high)
+        l = nIb > 0 ? array.get(ibL, i) : (vpDist == "Close only" ? close : low)
+        v = nIb > 0 ? array.get(ibV, i) : volume
+        up = nIb > 0 ? array.get(ibUp, i) : close >= open
+        f_accRange(p, h, l, v, up)
 
 f_levels(Profile p) =>
     n = array.size(p.vol)
@@ -1150,10 +1153,9 @@ if confirmed and useVp
                         box.delete(b)
                     array.clear(old.boxes)
                 hw = f_histW(dev.kind)
-                if vpPlace == "Left"
-                    f_drawProfile(dev, f_x(dev.startBar), f_x(dev.startBar) + hw, true)
-                else
-                    f_drawProfile(dev, f_x(math.max(dev.startBar, dev.endBar - hw)), dev.endBar, true)
+                px1 = vpPlace == "Left" ? f_x(dev.startBar) : f_x(math.max(dev.startBar, dev.endBar - hw))
+                px2 = vpPlace == "Left" ? f_x(dev.startBar) + hw : dev.endBar
+                f_drawProfile(dev, px1, px2, true)
                 array.push(doneQ, dev)
             else
                 for b in dev.boxes
@@ -1604,6 +1606,12 @@ var array<Fvg> htf3 = array.new<Fvg>()
 var array<Fvg> htf4 = array.new<Fvg>()
 var array<Fvg> htf5 = array.new<Fvg>()
 var array<Fvg> htf6 = array.new<Fvg>()
+var array<Fvg> noFvg = array.new<Fvg>()            // empty stand-in: a slot loop skips a pass without a branch
+var array<int> htfLastT = array.new<int>(6, na)    // last confirmed HTF bar time per slot (t1 of the previous bar)
+htfTfs = array.from(htfTf1, htfTf2, htfTf3, htfTf4, htfTf5, htfTf6)
+htfOns = array.from(htfOn1, htfOn2, htfOn3, htfOn4, htfOn5, htfOn6)
+f_slotArr(int k) =>
+    k == 0 ? fvgs : k == 1 ? htf1 : k == 2 ? htf2 : k == 3 ? htf3 : k == 4 ? htf4 : k == 5 ? htf5 : htf6
 minGap = math.max(minFvgPts, minFvgAtr * atr)
 var int fvgSes = 0
 if confirmed and curKind != curKind[1]
@@ -1676,45 +1684,54 @@ if useFvg and confirmed
     f_fvgUpdate(fvgs, false, close)
     bullGap = low - high[2]
     bearGap = low[2] - high
-    if bullGap > 0 and bullGap >= minGap and (not midClose or close[1] > high[2])
-        f_fvgAdd(fvgs, low, high[2], 1, bar_index - 1, chartTfLabel, false, maxFvg, false, false)
-    if bearGap > 0 and bearGap >= minGap and (not midClose or close[1] < low[2])
-        f_fvgAdd(fvgs, low[2], high, -1, bar_index - 1, chartTfLabel, false, maxFvg, false, false)
+    upG = bullGap > 0 and bullGap >= minGap and (not midClose or close[1] > high[2])
+    dnG = bearGap > 0 and bearGap >= minGap and (not midClose or close[1] < low[2])
+    // low > high[2] and low[2] > high exclude each other, so at most one of the two holds: one call site
+    if upG or dnG
+        f_fvgAdd(fvgs, upG ? low : low[2], upG ? high[2] : high, upG ? 1 : -1, bar_index - 1, chartTfLabel, false, maxFvg, false, false)
 
-var array<int> htfOpen1 = array.new<int>()
-var array<int> htfOpen2 = array.new<int>()
-var array<int> htfOpen3 = array.new<int>()
-var array<int> htfOpen4 = array.new<int>()
-var array<int> htfOpen5 = array.new<int>()
-var array<int> htfOpen6 = array.new<int>()
+var array<int> htfOpen1 = array.new<int>(4, na)
+var array<int> htfOpen2 = array.new<int>(4, na)
+var array<int> htfOpen3 = array.new<int>(4, na)
+var array<int> htfOpen4 = array.new<int>(4, na)
+var array<int> htfOpen5 = array.new<int>(4, na)
+var array<int> htfOpen6 = array.new<int>(4, na)
 
-f_htfProcess(array<Fvg> arr, array<int> opens, bool enabled, string tf, float h1, float l1, float c1, float h2, float l2, float c2, float h3, float l3, int t1) =>
+f_htfProcess(int k, float h1, float l1, float c1, float h2, float l2, float c2, float h3, float l3, int t1) =>
+    arr = f_slotArr(k)
+    opens = k == 1 ? htfOpen1 : k == 2 ? htfOpen2 : k == 3 ? htfOpen3 : k == 4 ? htfOpen4 : k == 5 ? htfOpen5 : htfOpen6
+    tf = array.get(htfTfs, k - 1)
     sec = timeframe.in_seconds(tf)
-    ok = enabled and useHtf and sec > chartSec
-    newBar = t1 != t1[1]
+    ok = array.get(htfOns, k - 1) and useHtf and sec > chartSec
+    prevT = array.get(htfLastT, k - 1)      // t1 of the previous bar: the var array rolls back on uncommitted ticks
+    newBar = t1 != prevT
     if ok and confirmed and newBar
-        array.push(opens, bar_index)            // first chart bar of each HTF bar
-        if array.size(opens) > 4
-            array.shift(opens)
-    if ok and confirmed and newBar and not na(h3) and not na(t1[1])
-        f_fvgUpdate(arr, true, c1)
-        rs = isLtf and htfPlace == "Right Side" and sec >= 900
-        nOpen = array.size(opens)
-        anchor = f_x(nOpen >= 3 ? array.get(opens, nOpen - 3) : bar_index)   // open bar of the displacement candle, within drawing reach
-        minH = math.max(minGap, htfMinPts)
-        gapB = l1 - h3
-        gapS = l3 - h1
-        if gapB > 0 and gapB >= minH and (not midClose or c2 > h3)
-            f_fvgAdd(arr, l1, h3, 1, anchor, f_tfLabel(tf), true, maxHtf, rs, sec >= 900)
-        if gapS > 0 and gapS >= minH and (not midClose or c2 < l3)
-            f_fvgAdd(arr, l3, h1, -1, anchor, f_tfLabel(tf), true, maxHtf, rs, sec >= 900)
+        array.push(opens, bar_index)            // first chart bar of each HTF bar; the slot keeps the last four
+        array.shift(opens)
+        if not na(h3) and not na(prevT)
+            f_fvgUpdate(arr, true, c1)
+            rs = isLtf and htfPlace == "Right Side" and sec >= 900
+            anchor = f_x(nz(array.get(opens, 1), bar_index))   // open bar of the displacement candle (third-last HTF open), within drawing reach
+            minH = math.max(minGap, htfMinPts)
+            gapB = l1 - h3
+            gapS = l3 - h1
+            upG = gapB > 0 and gapB >= minH and (not midClose or c2 > h3)
+            dnG = gapS > 0 and gapS >= minH and (not midClose or c2 < l3)
+            if upG or dnG
+                f_fvgAdd(arr, upG ? l1 : l3, upG ? h3 : h1, upG ? 1 : -1, anchor, f_tfLabel(tf), true, maxHtf, rs, sec >= 900)
+    array.set(htfLastT, k - 1, confirmed ? t1 : prevT)
 
-f_htfProcess(htf1, htfOpen1, htfOn1, htfTf1, h1a, l1a, c1a, h2a, l2a, c2a, h3a, l3a, t1a)
-f_htfProcess(htf2, htfOpen2, htfOn2, htfTf2, h1b, l1b, c1b, h2b, l2b, c2b, h3b, l3b, t1b)
-f_htfProcess(htf3, htfOpen3, htfOn3, htfTf3, h1c, l1c, c1c, h2c, l2c, c2c, h3c, l3c, t1c)
-f_htfProcess(htf4, htfOpen4, htfOn4, htfTf4, h1d, l1d, c1d, h2d, l2d, c2d, h3d, l3d, t1d)
-f_htfProcess(htf5, htfOpen5, htfOn5, htfTf5, h1e, l1e, c1e, h2e, l2e, c2e, h3e, l3e, t1e)
-f_htfProcess(htf6, htfOpen6, htfOn6, htfTf6, h1f, l1f, c1f, h2f, l2f, c2f, h3f, l3f, t1f)
+htfH1 = array.from(h1a, h1b, h1c, h1d, h1e, h1f)
+htfL1 = array.from(l1a, l1b, l1c, l1d, l1e, l1f)
+htfC1 = array.from(c1a, c1b, c1c, c1d, c1e, c1f)
+htfH2 = array.from(h2a, h2b, h2c, h2d, h2e, h2f)
+htfL2 = array.from(l2a, l2b, l2c, l2d, l2e, l2f)
+htfC2 = array.from(c2a, c2b, c2c, c2d, c2e, c2f)
+htfH3 = array.from(h3a, h3b, h3c, h3d, h3e, h3f)
+htfL3 = array.from(l3a, l3b, l3c, l3d, l3e, l3f)
+htfT1 = array.from(t1a, t1b, t1c, t1d, t1e, t1f)
+for k = 1 to 6
+    f_htfProcess(k, array.get(htfH1, k - 1), array.get(htfL1, k - 1), array.get(htfC1, k - 1), array.get(htfH2, k - 1), array.get(htfL2, k - 1), array.get(htfC2, k - 1), array.get(htfH3, k - 1), array.get(htfL3, k - 1), array.get(htfT1, k - 1))
 
 // Respect pass: a zone is "respected" when a chart bar comes from outside, taps its near edge, stays inside it and
 // closes back off it. Active gaps hold from f.dir; an inverted gap (IFVG) holds from the opposite side.
@@ -1734,16 +1751,9 @@ f_trackClose(array<Fvg> arr) =>
             f.maxClose := math.max(f.maxClose, close)
 
 if useFvg and confirmed
-    f_trackClose(fvgs)
-    f_trackClose(htf1)
-    f_trackClose(htf2)
-    f_respectPass(fvgs)
-    f_respectPass(htf1)
-    f_respectPass(htf2)
-    f_respectPass(htf3)
-    f_respectPass(htf4)
-    f_respectPass(htf5)
-    f_respectPass(htf6)
+    for k = 0 to 6
+        f_trackClose(k <= 2 ? f_slotArr(k) : noFvg)   // closes are tracked for the chart gaps and slots 1-2 only
+        f_respectPass(f_slotArr(k))
 
 // HTF confluence: price inside (or just reacted from) an active HTF gap in direction d.
 f_htfTouch(array<Fvg> arr, int d) =>
@@ -1757,12 +1767,9 @@ f_htfTouchTf(array<Fvg> arr, int d, string tf) =>
     timeframe.in_seconds(tf) >= 900 ? f_htfTouch(arr, d) : ""
 
 f_htfAligned(int d) =>
-    r = f_htfTouchTf(htf1, d, htfTf1)
-    r := r != "" ? r : f_htfTouchTf(htf2, d, htfTf2)
-    r := r != "" ? r : f_htfTouchTf(htf3, d, htfTf3)
-    r := r != "" ? r : f_htfTouchTf(htf4, d, htfTf4)
-    r := r != "" ? r : f_htfTouchTf(htf5, d, htfTf5)
-    r := r != "" ? r : f_htfTouchTf(htf6, d, htfTf6)
+    r = ""
+    for k = 1 to 6
+        r := r != "" ? r : f_htfTouchTf(f_slotArr(k), d, array.get(htfTfs, k - 1))
     r
 
 // Checklist step 2: remember the first mapped 15m+ gap in the idea's direction that price touched since the sweep.
@@ -1989,64 +1996,75 @@ f_planBe() =>
         box.set_bgcolor(st.bxRisk, color.new(chart.fg_color, 90))
 
 drawPlanNow = false
-// a deeper print re-based the sweep, or the leg an OTE plan was measured from has extended: the pending plan is stale
-if confirmed and st.plState == 1 and ((nz(st.rebaseBar, -1) == bar_index and st.plDir == st.swDir) or (st.plModel == "OTE Retest" and not na(st.plLegExt) and st.plLegExt != st.legExt))
-    f_planEnd(5, nz(st.rebaseBar, -1) == bar_index and st.plDir == st.swDir ? "Expired · deeper sweep before entry" : "Expired · leg extended")
-if confirmed and (st.plState == 1 or st.plState == 2)
-    pl.state := st.plState
-    pl.dir := st.plDir
-    pl.entry := st.plEntry
-    pl.sl := st.plSl
-    pl.tps := st.plTps
-    pl.hit := st.plHit
-    pl.bar := st.plBar
-    pl.R := st.plR
-    pl.be := st.plBe
-    pl.far := st.plFar
-    pl.zTop := st.plZTop
-    pl.zBot := st.plZBot
-    pl.buf := st.plBuf
-    pl.touched := st.plTouched
-    pl.confirmN := st.plConfirmN
-    pl.ceHit := st.plCeHit
-    pl.fvg := st.plFvg
-    beBefore = st.plBe
-    [es, res, act] = f_lifeStep(pl, true)
-    st.plState := pl.state
-    st.plEntry := pl.entry
-    st.plSl := pl.sl
-    st.plHit := pl.hit
-    st.plR := pl.R
-    st.plBar := pl.bar
-    st.plBe := pl.be
-    st.plTouched := pl.touched
-    st.plConfirmN := pl.confirmN
-    st.plCeHit := pl.ceHit
-    if act
-        drawPlanNow := true
-        st.swUsed := st.swDir == st.plDir ? true : st.swUsed
-        st.brkUsed := st.plModel == "Breaker Retest" ? true : st.brkUsed
-        st.oteUsed := st.plModel == "OTE Retest" ? true : st.oteUsed
-    if es != 0
-        f_planEnd(es, res)
-    else if st.plBe and not beBefore
-        f_planBe()
+// One lifecycle pass for the live plan (k = 0, mirrored in / out of st.pl*), the shadow idea (k = 1: the same lifecycle
+// without drawings, alerts or session counting) and the placebo control (k = 2, no fill rules): a single f_lifeStep call site.
+if confirmed
+    for k = 0 to 2
+        Life L = k == 0 ? pl : k == 1 ? sh : ct
+        run = k == 0 ? (st.plState == 1 or st.plState == 2) : k == 1 ? (sh.state == 1 or sh.state == 2) : ct.state == 2
+        if run
+            // a deeper print re-based the sweep, or the leg an OTE plan was measured from has extended: the pending plan is stale
+            deeper = nz(st.rebaseBar, -1) == bar_index and st.plDir == st.swDir
+            stale = k == 0 and st.plState == 1 and (deeper or (st.plModel == "OTE Retest" and not na(st.plLegExt) and st.plLegExt != st.legExt))
+            beBefore = st.plBe
+            if k == 0
+                pl.state := st.plState
+                pl.dir := st.plDir
+                pl.entry := st.plEntry
+                pl.sl := st.plSl
+                pl.tps := st.plTps
+                pl.hit := st.plHit
+                pl.bar := st.plBar
+                pl.R := st.plR
+                pl.be := st.plBe
+                pl.far := st.plFar
+                pl.zTop := st.plZTop
+                pl.zBot := st.plZBot
+                pl.buf := st.plBuf
+                pl.touched := st.plTouched
+                pl.confirmN := st.plConfirmN
+                pl.ceHit := st.plCeHit
+                pl.fvg := st.plFvg
+            es = 0
+            res = ""
+            act = false
+            if stale
+                es := 5
+                res := deeper ? "Expired · deeper sweep before entry" : "Expired · leg extended"
+            else
+                [es0, res0, act0] = f_lifeStep(L, k != 2)
+                es := es0
+                res := res0
+                act := act0
+            if k == 0 and not stale
+                st.plState := pl.state
+                st.plEntry := pl.entry
+                st.plSl := pl.sl
+                st.plHit := pl.hit
+                st.plR := pl.R
+                st.plBar := pl.bar
+                st.plBe := pl.be
+                st.plTouched := pl.touched
+                st.plConfirmN := pl.confirmN
+                st.plCeHit := pl.ceHit
+                if act
+                    drawPlanNow := true
+                    st.swUsed := st.swDir == st.plDir ? true : st.swUsed
+                    st.brkUsed := st.plModel == "Breaker Retest" ? true : st.brkUsed
+                    st.oteUsed := st.plModel == "OTE Retest" ? true : st.oteUsed
+            if k == 0 and es != 0
+                f_planEnd(es, res)
+            else if k == 0 and st.plBe and not beBefore
+                f_planBe()
+            else if k == 1 and es != 0
+                f_shEnd(es, res)
+            else if k == 2 and es != 0
+                st.nCtrlWin += ct.hit >= 1 ? 1 : 0
+                st.nCtrlLoss += es == 4 ? 1 : 0
+                ct.state := 0
 
 if confirmed and (st.plState == 3 or st.plState == 4 or st.plState == 5) and bar_index - st.plEndBar > resultBars and (not na(st.lnEntry) or not na(st.bxZone))
     f_planClear()
-
-// ── Shadow idea: the same lifecycle as the live plan, without drawings, alerts or session counting ──
-if confirmed and (sh.state == 1 or sh.state == 2)
-    [es, res, act] = f_lifeStep(sh, true)
-    if es != 0
-        f_shEnd(es, res)
-// ── Placebo control ──
-if confirmed and ct.state == 2
-    [es, res, act] = f_lifeStep(ct, false)
-    if es != 0
-        st.nCtrlWin += ct.hit >= 1 ? 1 : 0
-        st.nCtrlLoss += es == 4 ? 1 : 0
-        ct.state := 0
 
 if confirmed and array.size(ideaMarkT) > 0
     f_pruneMarks()
@@ -2323,13 +2341,13 @@ f_mapNewest(array<Fvg> arr, string tf, bool enabled, int d0, int b0) =>
     [dd, bb]
 
 f_mapBias() =>
-    [d1, b1] = f_mapNewest(htf1, htfTf1, htfOn1, 0, -1)
-    [d2, b2] = f_mapNewest(htf2, htfTf2, htfOn2, d1, b1)
-    [d3, b3] = f_mapNewest(htf3, htfTf3, htfOn3, d2, b2)
-    [d4, b4] = f_mapNewest(htf4, htfTf4, htfOn4, d3, b3)
-    [d5, b5] = f_mapNewest(htf5, htfTf5, htfOn5, d4, b4)
-    [d6, b6] = f_mapNewest(htf6, htfTf6, htfOn6, d5, b5)
-    d6
+    dAcc = 0
+    bAcc = -1
+    for k = 1 to 6
+        [dNew, bNew] = f_mapNewest(f_slotArr(k), array.get(htfTfs, k - 1), array.get(htfOns, k - 1), dAcc, bAcc)
+        dAcc := dNew
+        bAcc := bNew
+    dAcc
 
 f_valueBias() =>
     role = na(f_levelVal("OV", "VAH", false)) ? "PD" : "OV"
@@ -2349,9 +2367,6 @@ f_biasOK(int d) =>
 
 quietNow = (openQuietMin > 0 and not na(sesOpenTime) and time - sesOpenTime < openQuietMin * 60000) or (reviewQuiet > 0 and not na(twoSidedBar) and bar_index - twoSidedBar <= reviewQuiet) or (mocQuiet and inMoc)
 windowOK = (tradeWindow == "Any" or (tradeWindow == "Killzones" and (inKzAm or inKzPm or inLate)) or (tradeWindow == "Silver Bullet (10–11 · 14–15)" and (inSbAm or inSbPm)) or (tradeWindow == "NY AM + PM" and (array.get(inSesArr, 2) or array.get(inSesArr, 3))) or (tradeWindow == "NY AM only" and array.get(inSesArr, 2))) and not quietNow
-if drawPlanNow
-    f_planDraw()
-
 cooled = coolStop and dirNow == nz(st.coolDir) and ((st.swDir == dirNow and st.swBar == nz(st.coolSwBar, -1)) or (st.vpDir == dirNow and st.vpBar == nz(st.coolVpBar, -1)))
 newPlan = false
 // a plan may be saved on this bar (save slot); otherwise a complete candidate can still be followed as a shadow idea
@@ -2596,7 +2611,11 @@ if confirmed and st.swDir != 2 and (dirNow == 1 or dirNow == -1)
                 st.vpModel := ""
                 st.holdCount := 0
             newPlan := true
-            f_planDraw()
+            drawPlanNow := true
+
+// one draw of the final state: an activation in the lifecycle above and / or a plan saved in the candidate block
+if drawPlanNow
+    f_planDraw()
 
 if confirmed and (st.plState == 1 or st.plState == 2)
     x2 = bar_index + 5
@@ -2636,7 +2655,7 @@ f_drawVpLevels() =>
                     L = f_levelVal(role, lvl, true)
                     if not na(L) and math.abs(L - close) <= 8 * atr
                         isPoc = lvl == "POC"
-                        c = role == "DEV" ? (isPoc ? color.new(chart.fg_color, 20) : color.new(levelCol, f_alpha("live"))) : color.new(isPoc ? pocCol : levelCol, f_alpha("untaken"))
+                        c = role == "DEV" ? (isPoc ? color.new(chart.fg_color, 20) : color.new(levelCol, aLive)) : color.new(isPoc ? pocCol : levelCol, aUntaken)
                         array.push(vpLines, line.new(x1, L, x2, L, color = c, style = role == "DEV" and not isPoc ? line.style_dashed : f_roleStyle(role), width = role == "DEV" and isPoc ? 2 : 1))
                         if useVpLabels and (role == "DEV" or math.abs(L - close) <= 1.5 * atr)
                             f_edgePush(L, lvl + (role == "DEV" ? "" : " " + role) + (role == "DEV" and not devEligible ? " *" : "") + (vpPrices ? " " + f_price(L) : ""), c, role == "DEV" ? 4 : 6)
@@ -2746,20 +2765,19 @@ if heavyDraw
         oteBox := box.new(f_x(st.swBar), o62h, bar_index + 5, o79h, border_color = color.new(oteC, 50), border_width = 1, border_style = line.style_dotted, bgcolor = color.new(oteC, 100), text = "OTE", text_size = lblSz, text_color = color.new(oteC, 30), text_halign = text.align_left, text_valign = text.align_center)
     if useHist and not na(dev)
         hw = f_histW(dev.kind)
-        if vpPlace == "Left"
-            f_drawProfile(dev, f_x(dev.startBar), math.max(f_x(dev.startBar) + 1, math.min(f_x(dev.startBar) + hw, bar_index)), false)
-        else
-            f_drawProfile(dev, bar_index + 2, bar_index + 2 + hw, false)
+        px1 = vpPlace == "Left" ? f_x(dev.startBar) : bar_index + 2
+        px2 = vpPlace == "Left" ? math.max(f_x(dev.startBar) + 1, math.min(f_x(dev.startBar) + hw, bar_index)) : bar_index + 2 + hw
+        f_drawProfile(dev, px1, px2, false)
     for s in sessions
         sc = sesIndivCol ? s.col : levelCol
         farS = isFocus and math.abs(s.hi - close) > 3 * atr
         farL = isFocus and math.abs(s.lo - close) > 3 * atr
         if not s.hiTaken and not na(s.hiLn)
             line.set_x2(s.hiLn, bar_index + 5)
-            line.set_color(s.hiLn, color.new(sc, farS ? 100 : f_alpha("untaken")))
+            line.set_color(s.hiLn, color.new(sc, farS ? 100 : aUntaken))
         if not s.loTaken and not na(s.loLn)
             line.set_x2(s.loLn, bar_index + 5)
-            line.set_color(s.loLn, color.new(sc, farL ? 100 : f_alpha("untaken")))
+            line.set_color(s.loLn, color.new(sc, farL ? 100 : aUntaken))
         if s.active
             if not na(s.dHiLn)
                 line.set_x2(s.dHiLn, bar_index + 5)
@@ -2767,24 +2785,20 @@ if heavyDraw
                 line.set_x2(s.dLoLn, bar_index + 5)
         if useSesLabels and s.show and s.done
             if not s.hiTaken and not farS
-                f_edgePush(s.hi, s.isPd ? "PDH" : s.abbr + " H", color.new(sc, f_alpha("untaken")), s.isPd ? 5 : 3)
+                f_edgePush(s.hi, s.isPd ? "PDH" : s.abbr + " H", color.new(sc, aUntaken), s.isPd ? 5 : 3)
             if not s.loTaken and not farL
-                f_edgePush(s.lo, s.isPd ? "PDL" : s.abbr + " L", color.new(sc, f_alpha("untaken")), s.isPd ? 5 : 3)
-    if useHtf and isLtf and htfPlace == "Right Side"
-        f_placeRight(htf1)
-        f_placeRight(htf2)
-        f_placeRight(htf3)
-        f_placeRight(htf4)
-        f_placeRight(htf5)
-        f_placeRight(htf6)
-    if useFvg
-        f_gapVis(fvgs, htf1, promote and isLtf and f_ladderSlot(htfTf1, htfOn1), true, nearAtr)
-        f_gapVis(htf1, htf2, promote and isLtf and f_ladderSlot(htfTf1, htfOn1) and f_ladderSlot(htfTf2, htfOn2), f_slotLtf(htfTf1), nearAtr * 3)
-        f_gapVis(htf2, htf3, promote and isLtf and f_ladderSlot(htfTf2, htfOn2) and f_ladderSlot(htfTf3, htfOn3), f_slotLtf(htfTf2), nearAtr * 3)
-        f_gapVis(htf3, htf4, promote and f_anySlot(htfTf3, htfOn3) and f_anySlot(htfTf4, htfOn4), f_slotLtf(htfTf3), nearAtr * 3)
-        f_gapVis(htf4, htf5, promote and f_anySlot(htfTf4, htfOn4) and f_anySlot(htfTf5, htfOn5), f_slotLtf(htfTf4), nearAtr * 3)
-        f_gapVis(htf5, htf6, promote and f_anySlot(htfTf5, htfOn5) and f_anySlot(htfTf6, htfOn6), f_slotLtf(htfTf5), nearAtr * 3)
-        f_gapVis(htf6, htf5, false, f_slotLtf(htfTf6), nearAtr * 3)
+                f_edgePush(s.lo, s.isPd ? "PDL" : s.abbr + " L", color.new(sc, aUntaken), s.isPd ? 5 : 3)
+    for k = 0 to 6
+        if useHtf and isLtf and htfPlace == "Right Side" and k > 0
+            f_placeRight(f_slotArr(k))
+        if useFvg
+            // slot k and the next ladder slot; the chart gaps (k = 0) ladder onto slot 1, slot 6 has nothing above it
+            tfA = array.get(htfTfs, math.max(k, 1) - 1)
+            onA = array.get(htfOns, math.max(k, 1) - 1)
+            tfB = array.get(htfTfs, math.min(k, 5))
+            onB = array.get(htfOns, math.min(k, 5))
+            cov = k == 6 ? false : k <= 2 ? promote and isLtf and f_ladderSlot(tfA, onA) and f_ladderSlot(tfB, onB) : promote and f_anySlot(tfA, onA) and f_anySlot(tfB, onB)
+            f_gapVis(f_slotArr(k), f_slotArr(k == 6 ? 5 : k + 1), cov, k == 0 ? true : f_slotLtf(tfA), k == 0 ? nearAtr : nearAtr * 3)
     // EQ clusters and the CISD level (while the shift is still awaited)
     for ln in eqLines
         line.delete(ln)
@@ -2844,13 +2858,16 @@ headBg  = color.new(chart.fg_color, 90)
 okCol   = bullCol
 warnCol = #bf9000
 
-f_row(int r, string k, string v, color vc) =>
-    table.cell(cl, 0, r, k, text_color = dimCol, text_size = panelSize, text_halign = text.align_left)
-    table.cell(cl, 1, r, v, text_color = vc, text_size = panelSize, text_halign = text.align_left)
-
-f_rowT(int r, string k, string v, color vc, string tip) =>
-    table.cell(cl, 0, r, k, text_color = dimCol, text_size = panelSize, text_halign = text.align_left, tooltip = tip)
-    table.cell(cl, 1, r, v, text_color = vc, text_size = panelSize, text_halign = text.align_left, tooltip = tip)
+// checklist rows are collected per bar (key · value · colour · tooltip) and written by one loop
+rk = array.new<string>()
+rv = array.new<string>()
+rc = array.new<color>()
+rt = array.new<string>()
+f_add(string k, string v, color c, string t) =>
+    array.push(rk, k)
+    array.push(rv, v)
+    array.push(rc, c)
+    array.push(rt, t)
 
 if barstate.islast
     table.clear(cl, 0, 0, 1, 27)
@@ -2859,11 +2876,10 @@ if barstate.islast
         dirTxt = planLive ? (st.plDir == 1 ? "Bull" : "Bear") : st.swDir == 2 ? "Review" : dirNow == 1 ? "Bull" : dirNow == -1 ? "Bear" : "Neutral"
         dirColor = dirTxt == "Bull" ? bullCol : dirTxt == "Bear" ? bearCol : txtCol
         scoreOn = gradeMode == "Confluence score"
-        Fvg noGap = na
-        [liveScore, livePts] = f_score(dirNow == 0 ? 1 : dirNow, "", close, float(na), float(na), noGap)
-        scoreTag = scoreOn ? (planLive or resultFresh ? " · " + str.tostring(st.plScore) + "/11" : dirNow != 0 ? " · " + str.tostring(liveScore) + "/11" : "") : ""
+        pvFresh = st.pvBar >= 0 and bar_index - st.pvBar <= resultBars
+        scoreTag = scoreOn ? (planLive or resultFresh ? " · " + str.tostring(st.plScore) + "/11" : pvFresh ? " · " + str.tostring(st.pvScore) + "/11" : "") : ""
         gradeTxt = (st.plState == 2 ? "Grade " + st.plGrade : st.plState == 1 ? "Grade " + st.plGrade + " · Pending" : resultFresh ? "Grade " + st.plGrade + (st.plState == 3 ? " · Done" : st.plState == 4 ? " · Invalid" : " · Expired") : "Ungraded") + scoreTag
-        headerTip = scoreOn ? (planLive or resultFresh ? "Saved idea · " + st.plPts : dirNow != 0 ? "Live context · " + livePts : "No direction yet") : "G2S grading · A = sweep + reaction + VP alignment · A+ = A plus two confluences"
+        headerTip = scoreOn ? (planLive or resultFresh ? "Saved idea · " + st.plPts : pvFresh ? "Last complete setup · " + st.pvPts : "No complete setup yet") : "G2S grading · A = sweep + reaction + VP alignment · A+ = A plus two confluences"
         headerTxt = "G2S · " + dirTxt + (dayBias != 0 ? (dayBias == 1 ? " ↑" : " ↓") : "") + " · " + gradeTxt + (isOrig ? " · Original" : isStrict ? " · Strict" : isBal ? " · Balanced" : " · Custom")
         setupTxt = planLive or resultFresh ? st.plFamily : st.vpDir != 0 and st.vpDir == dirNow ? (st.vpKind == "Rotation" ? "Value Rotation" : "Value Continuation") : sweepLive ? "Liquidity Inversion" : "—"
         modelTxt = st.plState == 2 ? st.plModel + " ✓ · " + st.plLed : st.plState == 1 ? st.plModel + " · Pending · " + st.plLed : resultFresh ? st.plModel + " · " + st.lastResult : st.reactOK and st.reactDir == dirNow ? (sweepLive ? "FVG / IFVG" : "FVG Retest") + " · Pending · Price-action-led" : st.vpDir != 0 and st.vpDir == dirNow and st.vpKind == "Rotation" ? "VP Retest / Hold · Pending · VP-led" : "FVG / IFVG · Pending · Price-action-led"
@@ -2886,10 +2902,9 @@ if barstate.islast
         shadowTxt = "Filtered · " + str.tostring(sh.nPlans) + " · win " + (shDecided > 0 ? str.tostring(math.round(100.0 * sh.nWin / shDecided)) + "%" : "–") + " · TP3 " + (shDecided > 0 ? str.tostring(math.round(100.0 * sh.nFull / shDecided)) + "%" : "–") + " · stops " + str.tostring(sh.nLoss) + " · exp " + str.tostring(sh.nExp)
         statsTxt = (shadowMode != "Off" ? "Saved · " : "") + str.tostring(st.nPlans) + " ideas · win " + (decided > 0 ? str.tostring(math.round(100.0 * st.nWin / decided)) + "%" : "–") + " (TP1) · TP3 " + (decided > 0 ? str.tostring(math.round(100.0 * st.nFull / decided)) + "%" : "–") + " · stops " + str.tostring(st.nLoss) + " · exp " + str.tostring(st.nExp) + " · ctrl " + (st.nCtrlWin + st.nCtrlLoss > 0 ? str.tostring(math.round(100.0 * st.nCtrlWin / (st.nCtrlWin + st.nCtrlLoss))) + "%" : "–")
         // Decision aid: GO (a plan is live) · NO (a complete setup was refused, with the gate) · WAIT (what is still missing)
-        pvFresh = st.pvBar >= 0 and bar_index - st.pvBar <= resultBars
         decTxt = st.plState == 2 ? "GO · " + (st.plDir == 1 ? "LONG" : "SHORT") + " active · manage to the targets" : st.plState == 1 ? "GO · limit " + (st.plDir == 1 ? "LONG" : "SHORT") + " at " + f_price(st.plEntry) + " · wait for the fill" : pvFresh and st.pvBlock != "" ? "NO · " + st.pvBlock : st.swDir == 2 ? "WAIT · two-sided sweep, let it resolve" : dirNow == 0 ? "WAIT · no liquidity sweep or value context yet" : st.swDir == dirNow and not st.reactOK ? "WAIT · sweep in, no displacement / reversal yet" : st.swDir == dirNow and needMss and not st.mssOK ? "WAIT · no structure shift (CISD / MSS) yet" : st.vpDir == dirNow and st.swDir != dirNow ? "WAIT · value context, no retest / hold yet" : "WAIT · no zone retest yet"
         decCol = str.startswith(decTxt, "GO") ? okCol : str.startswith(decTxt, "NO") ? bearCol : warnCol
-        decTip = pvFresh ? "Last complete setup · " + st.pvModel + " · " + st.pvLed + "\n" + st.pvGates + "\n" + st.pvPts : "No complete setup yet · " + livePts
+        decTip = pvFresh ? "Last complete setup · " + st.pvModel + " · " + st.pvLed + "\n" + st.pvGates + "\n" + st.pvPts : "No complete setup yet"
         pvShow = planLive or pvFresh
         pvD = planLive ? st.plDir : st.pvDir
         pvE = planLive ? st.plEntry : st.pvEntry
@@ -2906,41 +2921,38 @@ if barstate.islast
         table.merge_cells(cl, 0, 0, 1, 0)
         macroRow = 0
         if clLayout == "Minimal" or isMinLay
-            f_row(1, "Entry Model", modelTxt, modelCol)
-            f_row(2, "Status", statusTxt, statusCol)
-            f_rowT(3, "Decision", decTxt, decCol, decTip)
-            f_row(4, "Macro Window", macroTxt, macroCol)
-            macroRow := 4
+            f_add("Entry Model", modelTxt, modelCol, "")
+            f_add("Status", statusTxt, statusCol, "")
+            f_add("Decision", decTxt, decCol, decTip)
+            f_add("Macro Window", macroTxt, macroCol, "")
+            macroRow := array.size(rk)
         else
-            r = 1
             if clLayout == "Full"
-                f_row(r, "1 · Liquidity sweep?", f_check(st.swDir == 1 or st.swDir == -1) + " " + sweepTxt, swCol)
-                f_row(r + 1, "2 · HTF FVG? (opt.)", f_check(htfTxt != "Not recorded") + " " + htfTxt, txtCol)
-                f_row(r + 2, "3 · SMT? (opt.)", f_check(smtFresh) + " " + smtTxt, txtCol)
-                f_row(r + 3, "4 · Displacement / reversal?", f_check(reactShown) + " " + reactTxt, reactShown ? okCol : dimCol)
-                f_row(r + 4, "5 · Confirmed FVG / IFVG / VP entry?", f_check(st.plState == 2) + " " + modelTxt, modelCol)
-                f_row(r + 5, "6 · Entry / SL / targets", planLive or (resultFresh and st.plState == 3) ? "E " + f_price(st.plEntry) + " · SL " + f_price(st.plSl) : "☐ Waiting", txtCol)
-                r := r + 6
-            f_row(r, "Setup Type", setupTxt, txtCol)
-            f_row(r + 1, "Entry Model", modelTxt, modelCol)
-            f_row(r + 2, "Liquidity Sweep", sweepTxt, swCol)
-            f_row(r + 3, "Price Reaction", reactTxt, reactShown ? okCol : dimCol)
-            f_row(r + 4, "HTF FVG (opt.)", htfTxt, htfTxt != "Not recorded" ? okCol : dimCol)
-            f_row(r + 5, "SMT (opt.)", smtTxt, smtFresh ? okCol : dimCol)
-            f_row(r + 6, "VP Context", vpTxt, planLive and st.plLed == "VP-led" ? okCol : dimCol)
-            f_row(r + 7, "Day", dayTxt, st.trendDir != 0 ? warnCol : dimCol)
-            f_row(r + 8, "Liq left", f_liqLeft(), dimCol)
-            f_row(r + 9, "Status", statusTxt, statusCol)
-            f_rowT(r + 10, "Decision", decTxt, decCol, decTip)
-            f_rowT(r + 11, "Plan preview", pvTxt, pvCol, pvFresh ? st.pvPts : "Entry · stop (points · ATR) · TP1 (R) · grade and score of the live plan or the last complete setup")
-            f_row(r + 12, "Macro Window", macroTxt, macroCol)
-            macroRow := r + 12
-            nextRow = r + 13
+                f_add("1 · Liquidity sweep?", f_check(st.swDir == 1 or st.swDir == -1) + " " + sweepTxt, swCol, "")
+                f_add("2 · HTF FVG? (opt.)", f_check(htfTxt != "Not recorded") + " " + htfTxt, txtCol, "")
+                f_add("3 · SMT? (opt.)", f_check(smtFresh) + " " + smtTxt, txtCol, "")
+                f_add("4 · Displacement / reversal?", f_check(reactShown) + " " + reactTxt, reactShown ? okCol : dimCol, "")
+                f_add("5 · Confirmed FVG / IFVG / VP entry?", f_check(st.plState == 2) + " " + modelTxt, modelCol, "")
+                f_add("6 · Entry / SL / targets", planLive or (resultFresh and st.plState == 3) ? "E " + f_price(st.plEntry) + " · SL " + f_price(st.plSl) : "☐ Waiting", txtCol, "")
+            f_add("Setup Type", setupTxt, txtCol, "")
+            f_add("Entry Model", modelTxt, modelCol, "")
+            f_add("Liquidity Sweep", sweepTxt, swCol, "")
+            f_add("Price Reaction", reactTxt, reactShown ? okCol : dimCol, "")
+            f_add("HTF FVG (opt.)", htfTxt, htfTxt != "Not recorded" ? okCol : dimCol, "")
+            f_add("SMT (opt.)", smtTxt, smtFresh ? okCol : dimCol, "")
+            f_add("VP Context", vpTxt, planLive and st.plLed == "VP-led" ? okCol : dimCol, "")
+            f_add("Day", dayTxt, st.trendDir != 0 ? warnCol : dimCol, "")
+            f_add("Liq left", f_liqLeft(), dimCol, "")
+            f_add("Status", statusTxt, statusCol, "")
+            f_add("Decision", decTxt, decCol, decTip)
+            f_add("Plan preview", pvTxt, pvCol, pvFresh ? st.pvPts : "Entry · stop (points · ATR) · TP1 (R) · grade and score of the live plan or the last complete setup")
+            f_add("Macro Window", macroTxt, macroCol, "")
+            macroRow := array.size(rk)
             if clLayout == "Full" and (planLive or (resultFresh and st.plState == 3))
                 for [i, tp] in st.plTps
-                    f_row(nextRow, "TP" + str.tostring(i + 1) + (i < st.plHit ? " ✓" : ""), f_price(tp) + " · " + str.tostring(math.abs(tp - st.plEntry) / st.plR, "#.##") + "R", txtCol)
-                    nextRow += 1
+                    f_add("TP" + str.tostring(i + 1) + (i < st.plHit ? " ✓" : ""), f_price(tp) + " · " + str.tostring(math.abs(tp - st.plEntry) / st.plR, "#.##") + "R", txtCol, "")
             if showStats
+                nextRow = array.size(rk) + 1
                 table.cell(cl, 0, nextRow, statsTxt, text_color = dimCol, text_size = panelSize, text_halign = text.align_left)
                 table.cell(cl, 1, nextRow, "", text_size = panelSize)
                 table.merge_cells(cl, 0, nextRow, 1, nextRow)
@@ -2948,6 +2960,9 @@ if barstate.islast
                     table.cell(cl, 0, nextRow + 1, shadowTxt, text_color = dimCol, text_size = panelSize, text_halign = text.align_left)
                     table.cell(cl, 1, nextRow + 1, "", text_size = panelSize)
                     table.merge_cells(cl, 0, nextRow + 1, 1, nextRow + 1)
+        for [i, k] in rk
+            table.cell(cl, 0, i + 1, k, text_color = dimCol, text_size = panelSize, text_halign = text.align_left, tooltip = array.get(rt, i))
+            table.cell(cl, 1, i + 1, array.get(rv, i), text_color = array.get(rc, i), text_size = panelSize, text_halign = text.align_left, tooltip = array.get(rt, i))
         if macroRow > 0
             table.cell_set_bgcolor(cl, 0, macroRow, macroBg)
             table.cell_set_bgcolor(cl, 1, macroRow, macroBg)
