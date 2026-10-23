@@ -167,7 +167,7 @@ devMinBars = input.int(20, "DEV eligible after (bars)", minval = 1, group = G6, 
 
 // ───────────────────────────── ⑧ Trade plan ─────────────────────────────
 const string G7 = "⑧ Trade plan"
-preset      = input.string("Balanced · A setups, NY hours", "Selectivity preset", options = ["Balanced · A setups, NY hours", "Strict · A setups only", "Original · every graded setup", "Custom · inputs below"], group = G7, tooltip = "Balanced (default): A, NY AM/PM, 1.5 ATR leg, 2/session; Strict: killzones, bias, 2 ATR; Original: B, no gates")
+preset      = input.string("Balanced · A setups, any hour", "Selectivity preset", options = ["Balanced · A setups, any hour", "Strict · A setups only", "Original · every graded setup", "Custom · inputs below"], group = G7, tooltip = "Balanced (default): A, any hour, 1.5 ATR leg, 2/VP session; Strict: killzones, bias, 2 ATR; Original: B, no gates")
 gradeMode   = input.string("Confluence score", "Grading", options = ["Confluence score", "G2S original (VP alignment)"], inline = "gm", group = G7)
 scoreA      = input.int(3, "A at", minval = 1, maxval = 10, inline = "gm", group = G7)
 scoreAp     = input.int(5, "A+ at", minval = 2, maxval = 10, inline = "gm", group = G7, tooltip = "Score (default): up to 10 points; A / A+ at the thresholds below. G2S: A = sweep + reaction + VP, A+ = A + 2.")
@@ -250,11 +250,11 @@ chartSec   = timeframe.in_seconds(timeframe.period)
 
 // Selectivity preset → effective gate values (the engine reads these, never the raw inputs)
 isStrict = preset == "Strict · A setups only"
-isBal    = preset == "Balanced · A setups, NY hours"
+isBal    = preset == "Balanced · A setups, any hour"
 isOrig   = preset == "Original · every graded setup"
 isPre    = isStrict or isBal
 minGrade      = isPre ? "A" : isOrig ? "B" : minGradeIn
-tradeWindow   = isStrict ? "Killzones" : isBal ? "NY AM + PM" : isOrig ? "Any" : tradeWindowIn
+tradeWindow   = isStrict ? "Killzones" : isBal ? "Any" : isOrig ? "Any" : tradeWindowIn
 needOpt       = isPre ? false : isOrig ? false : needOptIn
 legMinAtr     = isStrict ? 2.0 : isBal ? 1.5 : isOrig ? 0.0 : legMinAtrIn
 noFullFill    = isPre ? true : isOrig ? false : noFullFillIn
