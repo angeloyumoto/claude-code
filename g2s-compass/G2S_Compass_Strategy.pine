@@ -296,7 +296,7 @@ useVpLabels  = vpLabels and not isLean
 panelSize = panelSizeIn == "Tiny" ? size.tiny : panelSizeIn == "Normal" ? size.normal : size.small
 lblSz     = chartTextIn == "Small" ? size.small : size.tiny
 lblSzUp   = chartTextIn == "Small" ? size.normal : size.small
-fvgTxtSz  = lblSz
+fvgTxtSz  = lblSzUp
 markSize  = lblSz
 // alpha ladder: live 10 · untaken 45 · developing 65 · taken / bookkeeping 80
 const int aLive = 10
@@ -1630,7 +1630,7 @@ f_fvgAdd(array<Fvg> arr, float top, float bottom, int dir, int barIdx, string tf
     dirCol = dir == 1 ? bullCol : bearCol
     bg0 = dir == 1 ? fvgBullCol : fvgBearCol
     bg = light ? color.new(bg0, math.min(100, int(color.t(bg0)) + 4)) : bg0   // mapped 15m+ zones a touch lighter so stacks do not go dark
-    bx = box.new(barIdx, top, bar_index + 5, bottom, border_color = light ? color.new(dirCol, 60) : color.new(bg, 100), border_width = 1, border_style = light ? line.style_dashed : line.style_solid, bgcolor = bg, extend = extend.none, text = fvgLblMode == "None" or (fvgLblMode == "15m+ and IFVG only" and not light) ? "" : tfLbl + (fvgLblMode == "{tf} FVG" ? " FVG" : ""), text_size = fvgTxtSz, text_color = color.new(dirCol, 15), text_halign = text.align_left, text_valign = text.align_center)
+    bx = box.new(barIdx, top, bar_index + 5, bottom, border_color = light ? color.new(dirCol, 60) : color.new(bg, 100), border_width = 1, border_style = light ? line.style_dashed : line.style_solid, bgcolor = bg, extend = extend.none, text = fvgLblMode == "None" or (fvgLblMode == "15m+ and IFVG only" and not light) ? "" : tfLbl + (fvgLblMode == "{tf} FVG" ? " FVG" : ""), text_size = fvgTxtSz, text_color = dirCol, text_halign = text.align_right, text_valign = text.align_center)
     line ce = na
     if showCe
         ce := line.new(barIdx, (top + bottom) / 2, bar_index + 4, (top + bottom) / 2, color = color.new(dirCol, 50), style = line.style_dotted, extend = extend.none)
@@ -1661,7 +1661,7 @@ f_fvgUpdate(array<Fvg> arr, bool isHtf, float px) =>
                     f.used := false   // the inverted zone is a new zone: a gap spent on a retest plan can still trade as an IFVG
                     box.set_bgcolor(f.bx, ifvgCol)
                     box.set_text(f.bx, f.tf + " IFVG")
-                    box.set_text_color(f.bx, color.new(f.dir == 1 ? bearCol : bullCol, 15))
+                    box.set_text_color(f.bx, f.dir == 1 ? bearCol : bullCol)
                 else
                     f.state := 2
                     f_fvgFreeze(f)
@@ -2724,7 +2724,7 @@ f_gapVis(array<Fvg> arr, array<Fvg> higher, bool on, bool ltf, float nearMult) =
             zc = (f.state == 1 ? -f.dir : f.dir) == 1 ? bullCol : bearCol
             box.set_bgcolor(f.bx, fill ? bg : color.new(bg, 100))
             box.set_border_color(f.bx, planGap ? color.new(zc, 0) : show and not ltf ? color.new(zc, 60) : color.new(bg, 100))
-            box.set_text_color(f.bx, show ? color.new((f.state == 1 ? -f.dir : f.dir) == 1 ? bullCol : bearCol, 15) : color.new(color.white, 100))
+            box.set_text_color(f.bx, show ? ((f.state == 1 ? -f.dir : f.dir) == 1 ? bullCol : bearCol) : color.new(color.white, 100))
             if not na(f.ce)
                 line.set_color(f.ce, show ? color.new(f.dir == 1 ? bullCol : bearCol, 50) : color.new(color.white, 100))
 
